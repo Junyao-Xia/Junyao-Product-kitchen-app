@@ -1,4 +1,9 @@
 import { isOnOrAfterToday, parseISODate } from "@/lib/dates";
+import { findIngredientByName } from "@/lib/dinners";
+import type { Ingredient } from "@/lib/types";
+
+export const DUPLICATE_AVAILABLE_INGREDIENT_MESSAGE =
+  "That ingredient is already on your list.";
 
 export type IngredientFieldErrors = {
   name?: string;
@@ -23,6 +28,29 @@ export function validateIngredientFields(
 
 export function hasFieldErrors(errors: IngredientFieldErrors): boolean {
   return Boolean(errors.name || errors.reminderDate);
+}
+
+export function isAvailableIngredientNameOnList(
+  ingredients: Ingredient[],
+  name: string,
+): boolean {
+  const match = findIngredientByName(ingredients, name);
+  return match !== undefined && match.status === "available";
+}
+
+export function validateAddIngredient(
+  name: string,
+  reminderDate: string,
+  ingredients: Ingredient[],
+): IngredientFieldErrors {
+  const errors = validateIngredientFields(name, reminderDate);
+  if (
+    !errors.name &&
+    isAvailableIngredientNameOnList(ingredients, name.trim())
+  ) {
+    errors.name = DUPLICATE_AVAILABLE_INGREDIENT_MESSAGE;
+  }
+  return errors;
 }
 
 export function validateKeepDate(

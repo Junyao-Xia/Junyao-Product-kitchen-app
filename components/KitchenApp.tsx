@@ -9,6 +9,7 @@ import {
   AddIngredientPanelDecor,
   KitchenIllustration,
 } from "@/components/KitchenIllustration";
+import { QuickSelectMeats } from "@/components/QuickSelectMeats";
 import { ReminderDateNote } from "@/components/ReminderDateNote";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,7 @@ import type {
 } from "@/lib/types";
 import {
   hasFieldErrors,
-  validateIngredientFields,
+  validateAddIngredient,
 } from "@/lib/validate-ingredient";
 
 type KitchenAppProps = {
@@ -103,7 +104,11 @@ export function KitchenApp({ seedIngredients, dinners }: KitchenAppProps) {
 
   function handleAddIngredient(event: React.FormEvent) {
     event.preventDefault();
-    const errors = validateIngredientFields(newName, newReminderDate);
+    const errors = validateAddIngredient(
+      newName,
+      newReminderDate,
+      ingredients,
+    );
     setAddErrors(errors);
     if (hasFieldErrors(errors)) {
       return;
@@ -331,6 +336,16 @@ export function KitchenApp({ seedIngredients, dinners }: KitchenAppProps) {
               onSubmit={handleAddIngredient}
               className="kitchen-panel space-y-4 p-4 md:p-5"
             >
+              <QuickSelectMeats
+                ingredients={ingredients}
+                selectedName={newName}
+                onSelect={(name) => {
+                  setNewName(name);
+                  setAddErrors((current) =>
+                    current.name ? { ...current, name: undefined } : current,
+                  );
+                }}
+              />
               <div className="space-y-2">
                 <Label htmlFor="new-name">Name</Label>
                 <Input
