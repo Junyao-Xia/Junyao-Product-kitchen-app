@@ -52,3 +52,4 @@ already on `main`.
 |---|---|---|---|---|
 | 001 | [ai-dinner-simplify](./001-ai-dinner-simplify.md) | `shipped` | Junyao | **Make it simpler** for seeded + **AI** dinners; server validates AI recipe; **Simpler way** below steps; stale guard on dinner + ingredient changes. |
 | 002 | [ai-dinner-suggestions](./002-ai-dinner-suggestions.md) | `shipped` | Junyao | **Suggest dinners** + assumed oil/salt/pepper; ephemeral AI meals; simplify on AI detail (via spec 001). |
+| 003 | [meat-quick-select](./003-meat-quick-select.md) | `shipped` | Junyao | **Quick select** Beef/Pork/Chicken/Duck on Add ingredient; available-only duplicate guard; re-add after **Mark used**. |

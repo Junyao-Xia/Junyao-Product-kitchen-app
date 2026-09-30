@@ -136,6 +136,70 @@ describe("KitchenApp", () => {
     vi.unstubAllGlobals();
   });
 
+  it("fills the name from quick select without adding until submit", async () => {
+    const user = userEvent.setup();
+    render(
+      <KitchenApp seedIngredients={ingredientsSeed} dinners={dinners} />,
+    );
+    await screen.findByRole("heading", { name: "Dinners" });
+
+    expect(screen.getByRole("button", { name: "Chicken" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Beef" }));
+    expect(screen.getByLabelText("Name")).toHaveValue("Beef");
+
+    await user.type(screen.getByLabelText("Reminder date"), "2026-10-10");
+    await user.click(screen.getByRole("button", { name: "Add ingredient" }));
+    expect(await screen.findByText("Beef")).toBeInTheDocument();
+  });
+
+  it("rejects a duplicate available ingredient name", async () => {
+    const user = userEvent.setup();
+    render(
+      <KitchenApp seedIngredients={ingredientsSeed} dinners={dinners} />,
+    );
+    await screen.findByRole("heading", { name: "Dinners" });
+
+    await user.type(screen.getByLabelText("Name"), "chicken");
+    await user.type(screen.getByLabelText("Reminder date"), "2026-10-10");
+    await user.click(screen.getByRole("button", { name: "Add ingredient" }));
+    expect(
+      await screen.findByText("That ingredient is already on your list."),
+    ).toBeInTheDocument();
+  });
+
+  it("allows adding a meat again after the prior entry was marked used", async () => {
+    const user = userEvent.setup();
+    render(
+      <KitchenApp seedIngredients={ingredientsSeed} dinners={dinners} />,
+    );
+    await screen.findByRole("heading", { name: "Dinners" });
+
+    const markUsedButtons = screen.getAllByRole("button", { name: "Mark used" });
+    const chickenRow = markUsedButtons.find((button) =>
+      button.closest("li")?.textContent?.includes("Chicken"),
+    );
+    expect(chickenRow).toBeTruthy();
+    await user.click(chickenRow!);
+
+    expect(screen.getByRole("button", { name: "Chicken" })).not.toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Chicken" }));
+    await user.type(screen.getByLabelText("Reminder date"), "2026-10-12");
+    await user.click(screen.getByRole("button", { name: "Add ingredient" }));
+
+    await waitFor(() => {
+      const raw = window.localStorage.getItem(INGREDIENTS_STORAGE_KEY);
+      const parsed = JSON.parse(raw ?? "[]") as { name: string; status: string }[];
+      const chickens = parsed.filter(
+        (item) => item.name.toLowerCase() === "chicken",
+      );
+      expect(chickens).toHaveLength(2);
+      expect(chickens.filter((item) => item.status === "used")).toHaveLength(1);
+      expect(chickens.filter((item) => item.status === "available")).toHaveLength(
+        1,
+      );
+    });
+  });
+
   it("persists a newly added ingredient after reload", async () => {
     const user = userEvent.setup();
     const { unmount } = render(
