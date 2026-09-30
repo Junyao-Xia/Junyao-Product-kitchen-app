@@ -1,0 +1,114 @@
+---
+description: Course rails for the AI Building Intensive — stack, design, secrets, scope. Follow silently; talk in product terms.
+alwaysApply: true
+---
+
+# Workshop rails
+
+You are building a student prototype for a 3-day workshop. Follow these rails on every change.
+
+Put every new file where `.cursor/rules/folders.mdc` says. Do not use `src/`.
+Do not create a folder until it has a real file.
+
+## Student-facing voice
+
+Follow these rails silently. Students are building their product, not studying the workshop.
+
+In chat, UI copy, code comments, and files they will treat as their work (`PRD.md` they filled, specs, the live app):
+
+- Speak in product terms: screens, objects, and actions from `PRD.md`.
+- Do not mention the workshop, the course, class sessions, Day 1/2/3, "later session," "workshop constraint," "course rails," or "v1 stand-in."
+- Do not explain a missing database, API, or model as something that "comes later" in class. If they ask why there is no database or why tagging is not a model, say what the app does now (new items stay in the browser; themes come from the words in the item) and ask whether they want to add that next.
+- Do not name the technique you used as pedagogy (tag-matching, template explanations, "no OpenAI yet," "LLM narration later"). Describe the behavior the user will see.
+- Do not apologize that this version is fake or temporary.
+
+Allowed: follow every rail below; ask product questions; say what the screen will do.
+If they ask how the course is structured, answer in one sentence and return to their product.
+Do not assign the next class exercise. When the current ask is done, list what you did and stop. The instructor sets the pace.
+
+## Stack
+
+Use Next.js (App Router) + React + TypeScript + Tailwind + shadcn/ui. Deploy on Vercel. Neon (Postgres, from Vercel Storage) and OpenAI come later — do not add them unless the student or `PRD.md` explicitly asks.
+
+Do not switch to Vite, Python, Expo/React Native, or a second database (no Supabase, Firebase, Mongo).
+
+If the folder is not already a Next.js app, scaffold it first (non-interactive). If the folder already has `DESIGN.md` / `.cursor/`, scaffold in `_next` and move the files up so you do not overwrite those:
+
+`npx create-next-app@latest _next --ts --tailwind --eslint --app --no-src-dir --import-alias "@/*" --use-npm --yes`
+
+Then add shadcn (non-interactive — do not run `init` without `-d`; it will hang on prompts):
+
+`npx shadcn@latest init -d`
+
+Install this starter kit (bootstrap already did):
+
+`npx shadcn@latest add button card input label textarea badge select checkbox separator -y`
+
+Do not hand-roll those primitives. Style them with the design tokens in `app/globals.css` (applied from the student's `DESIGN.md`).
+
+Need another shadcn primitive later (table, tabs, toast, chart)? Add it the same way: `npx shadcn@latest add <name> -y`. That is not an extra library. Do not hand-roll a substitute. Do not install all of shadcn. Do not add a second component library.
+
+Add a chart only if `PRD.md` asks — then use shadcn Chart (that installs Recharts). Do not add Recharts on its own. Do not use Chart.js, Tremor, or Nivo.
+
+Leave `AGENTS.md` and `CLAUDE.md` if Next created them. `next dev` rewrites them if you delete them.
+
+When you build the first real screen, **replace** the create-next-app starter page. Do not keep `bg-zinc-50`, `dark:`, or hardcoded hex from that template. Product UI uses Harbor tokens only (`bg-background`, `bg-primary`, `text-muted-foreground`).
+
+If `package.json` name is `_next` or `next-tmp`, rename it to the project folder name.
+
+## Data (before APIs and Neon)
+
+Every student project uses the same persistence path. Only the object names and fields change — those come from `PRD.md`.
+
+1. **Seed** — put sample records in `data/*.json`, named after the object (`data/recipes.json`, `data/feedback.json`). Use the field names in `PRD.md`. The app must look populated on first run.
+2. **New items** — write user-created records to **localStorage**. Merge seed + localStorage when rendering lists. Do this until Neon is added.
+3. **Neon (later)** — same field names, now shared across devices. Replace localStorage writes; do not leave a second store in place.
+
+The core flow must run with no Neon, no OpenAI, and no third-party API. An empty `.env` from the course template is fine — do not require a key for the first build.
+
+Do not write a JSON file on the server — that looks fine on a laptop and breaks on Vercel. Do not add a memory store, a `lib/db.ts` switch, Supabase, or Neon unless the student or `PRD.md` explicitly asks.
+
+Do not connect to a database at import time or during `next build`. If `DATABASE_URL` and `POSTGRES_URL` are both unset, keep using seed JSON + localStorage — **never throw**. A missing database must not fail the Vercel build or crash the first page load.
+
+## Design
+
+`DESIGN.md` at the app root is the only place that defines the look (Harbor, unless the student edited the tokens). Follow it exactly. Do not invent a new visual style, color palette, or type system. Do not add a second design file. Do not use Chart.js, Tremor, or Nivo. Do not pick or rename a look in `PRD.md`, specs, or chat — read `DESIGN.md`.
+
+After `npx shadcn@latest init -d`, apply Harbor tokens from `themes/harbor.css` into `app/globals.css`: replace the values inside `:root { ... }`. Keep imports, `@theme`, and the base layer. To rebrand, change hex in `:root` and `DESIGN.md`.
+
+Use semantic utilities only (`bg-background`, `bg-primary`, `text-muted-foreground`, `border-border`, `rounded-lg`, etc.). Never hardcode hex, rgb, or one-off Tailwind palette colors (`bg-blue-600`) in product UI. To change the brand later, edit tokens in `:root` — do not restyle `components/ui/` or scatter new colors through pages.
+
+## Secrets
+
+Put secrets in `.env` only. Never commit `.env`. Students start from the course `.env.example` (copy to `.env` in the app root).
+
+**OpenAI (when `PRD.md` asks for it):**
+- The only OpenAI env var is `OPENAI_API_KEY`.
+- Hardcode the model as `"gpt-4o-mini"` in `lib/openai.ts` (or the call site). Do not add `OPENAI_MODEL` or any other model env var.
+- Read the key only from server code. Never use `NEXT_PUBLIC_*` for secrets.
+
+**Neon (later):** Put `DATABASE_URL` or `POSTGRES_URL` in `.env`. Treat either as valid (Vercel/Neon may set one or both).
+
+Call third-party APIs, the database, and OpenAI only from server code (Route Handlers or Server Actions) — never from client components or the browser. Do this even when the API has no key: it avoids CORS failures and keeps the same habit you’ll use for Neon and OpenAI. Put any key or config (lat/lon, country code) in `.env` — not the OpenAI model name.
+
+## Scope
+
+**Product scope** lives in `PRD.md`. Build only what it asks for. Do not add auth, payments, email, file uploads, extra pages, or extra libraries unless a P0 requirement needs them. More shadcn primitives are not extra libraries — add them when the screen needs them.
+
+**Delivery scope** lives in `specs/` once that folder exists. Bootstrap already put `specs/_template.md`, `specs/README.md`, and `HANDOFF.md` in the app — leave those files. Do not write spec 001 or fill the handoff unless the student asks. When a spec is `building`, follow it and the index in `specs/README.md`. Do not invent slices the PRD does not support. Do not block a build on writing a spec.
+
+When a spec and the PRD disagree, the PRD wins on *what the product is*; amend the spec (change log) if the slice was wrong. When code and a shipped spec disagree, amend the spec or fix the code — say which.
+
+If something is unclear, ask before assuming.
+
+## Quality
+
+Product rules live in `lib/`: validate, merge seed + localStorage, calculate, filter, rank, match, format, allowlist, fallback. Pages and components render. Do not leave those rules only in a page or a `useEffect`.
+
+After a user-visible slice works (not a rename, token tweak, or lint):
+
+1. Write or update tests for the store (seed, add, merge, reload, empty), required-field rejection from `PRD.md`, every new `lib/` function this slice added (happy path and each branch), and the screen cases this slice owns (empty / first visit, blank or bad input, refresh still shows the new item). Skip a case the slice does not own.
+2. At most ~5 screen tests. Assert what the user sees or what the function returns. No snapshots. No Playwright. Do not call OpenAI or a third-party API in tests — test the fallback and any parser you wrote. Do not invent extra product behavior to raise coverage. Do not test `app/`, `components/ui/`, or layout to pad the floor.
+3. Run `npm test` then `npm run build`. Fix red. Then stop.
+
+`npm test` fails if `lib/` is under 80% line and branch coverage. Do not lower the threshold, add Playwright, or add CI unless the student asks. When writing the tests, follow `.cursor/skills/writing-tests/`.

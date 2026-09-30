@@ -1,0 +1,45 @@
+---
+description: Default folder map — where every new file goes
+alwaysApply: true
+---
+
+# Folder map
+
+Same map for this workshop and later projects. Do not use `src/`.
+Do not create a folder until it has a real file.
+
+| If it is… | Put it in… |
+|---|---|
+| Product, look, or session state | `PRD.md` · `DESIGN.md` (the look — only source of truth) · `HANDOFF.md` at the root |
+| A delivery slice | `specs/NNN-name.md` + a row in `specs/README.md` |
+| An agent rail | `.cursor/rules/` · `.cursor/skills/` |
+| A page the user can visit | `app/…/page.tsx` (one folder per URL) |
+| A Server Action or Route Handler | `app/actions/` · `app/api/` |
+| Product UI | `components/` — never inside `components/ui/` |
+| A shadcn primitive | `components/ui/` — do not hand-edit |
+| Types, loaders, formatters, db | `lib/` |
+| A client to OpenAI, Neon, email, or another API | `lib/<name>.ts` — not `services/` |
+| Seed records | `data/*.json`, named after the object |
+| Images / favicon | `public/` |
+| A secret | `.env` only — never commit. Start from course `.env.example` (OpenAI key only; model is hardcoded) |
+| Copy split from engine | `content/` — only if `PRD.md` asks |
+| A test | `tests/` or `*.test.ts` next to the file. Coverage counts `lib/` only. |
+
+`src/` is a wrapper, not a kind of file. This workshop scaffolds with
+`--no-src-dir`. Never add `src/` later to "organize source." If a future
+project already has `src/`, `app/`, `components/`, and `lib/` (and
+`content/` if present) live inside it. Root contracts, `specs/`, `.cursor/`,
+`data/`, `public/`, and `.env` stay at the root.
+
+A **service** is a client to another system. It is a file in `lib/`
+(`lib/openai.ts`). The Server Action in `app/actions/` calls it. Do not
+create `services/` or `src/services/`.
+
+Do not add a second utils tree. Do not put seed JSON in `public/`.
+Do not add `lib/db.ts` until Neon exists; then it replaces localStorage writes
+and keeps the same field names.
+
+Bootstrap already created `specs/_template.md`, `specs/README.md`,
+and `HANDOFF.md`. Leave them. Do not write spec 001 or fill the handoff
+unless the student asks. `.cursor/skills/` should already be present.
+`content/` and `tests/` wait until there is a file that belongs there.

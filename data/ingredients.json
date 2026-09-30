@@ -1,0 +1,44 @@
+[
+  {
+    "id": "seed-spinach",
+    "name": "Spinach",
+    "reminderOffsetDays": -1,
+    "status": "available"
+  },
+  {
+    "id": "seed-chicken",
+    "name": "Chicken",
+    "reminderOffsetDays": 1,
+    "status": "available"
+  },
+  {
+    "id": "seed-onion",
+    "name": "Onion",
+    "reminderOffsetDays": 2,
+    "status": "available"
+  },
+  {
+    "id": "seed-yogurt",
+    "name": "Yogurt",
+    "reminderOffsetDays": 3,
+    "status": "available"
+  },
+  {
+    "id": "seed-rice",
+    "name": "Rice",
+    "reminderOffsetDays": 4,
+    "status": "available"
+  },
+  {
+    "id": "seed-eggs",
+    "name": "Eggs",
+    "reminderOffsetDays": 5,
+    "status": "available"
+  },
+  {
+    "id": "seed-tortillas",
+    "name": "Tortillas",
+    "reminderOffsetDays": 6,
+    "status": "available"
+  }
+]

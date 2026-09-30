@@ -1,0 +1,46 @@
+[
+  {
+    "id": "dinner-chicken-rice",
+    "name": "Chicken and rice",
+    "minutes": 20,
+    "ingredientNames": ["Chicken", "Rice"],
+    "steps": [
+      "Rinse 1 cup rice and add to a small pot with 1½ cups water. Bring to a boil, cover, lower heat, and simmer 12 minutes. Turn off heat and leave covered.",
+      "Cut chicken into bite-size pieces. Season with salt and pepper. Heat 1 tbsp oil in a skillet over medium-high and cook chicken, stirring, until no pink shows, about 8 minutes.",
+      "Fluff the rice with a fork and serve with the chicken."
+    ]
+  },
+  {
+    "id": "dinner-egg-fried-rice",
+    "name": "Egg fried rice",
+    "minutes": 20,
+    "ingredientNames": ["Eggs", "Rice", "Onion"],
+    "steps": [
+      "Cook rice if you do not have leftovers: simmer 1 cup rice in 1½ cups water, covered, for 12 minutes, then spread on a plate to cool slightly.",
+      "Dice half the onion. Beat 2 eggs with a pinch of salt.",
+      "Heat oil in a large skillet over medium-high. Scramble the eggs until just set, push to the side, add onion for 2 minutes, then stir in rice. Cook 3–4 minutes until hot. Season and serve."
+    ]
+  },
+  {
+    "id": "dinner-chicken-tortilla",
+    "name": "Chicken tortilla wrap",
+    "minutes": 20,
+    "ingredientNames": ["Chicken", "Tortillas", "Onion"],
+    "steps": [
+      "Slice chicken into thin strips. Season with salt and pepper.",
+      "Heat oil in a skillet over medium-high. Cook chicken strips until browned and cooked through, about 7 minutes.",
+      "Warm tortillas in the dry skillet for 30 seconds per side. Slice onion thin, fill tortillas with chicken and onion, roll, and serve."
+    ]
+  },
+  {
+    "id": "dinner-spinach-eggs",
+    "name": "Spinach and eggs",
+    "minutes": 15,
+    "ingredientNames": ["Spinach", "Eggs"],
+    "steps": [
+      "Rinse spinach and shake dry. Beat 2 eggs with salt and pepper.",
+      "Heat oil in a nonstick pan over medium. Add spinach and cook until wilted, about 2 minutes.",
+      "Pour in eggs, stir gently until softly set, about 3 minutes. Serve immediately."
+    ]
+  }
+]
