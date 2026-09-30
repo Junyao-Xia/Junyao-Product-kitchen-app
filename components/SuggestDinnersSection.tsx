@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { listCookableIngredientNames } from "@/lib/cookable-ingredients";
 import { buildIngredientFingerprint } from "@/lib/ingredient-fingerprint";
 import { ASSUMED_PANTRY_NOTE } from "@/lib/assumed-pantry";
+import { KitchenIllustration } from "@/components/KitchenIllustration";
 import { SUGGEST_NO_COOKABLE_MESSAGE } from "@/lib/suggest-dinners";
 import type { AiDinnerSuggestion, Ingredient } from "@/lib/types";
 
@@ -132,6 +133,21 @@ export function SuggestDinnersSection({
         <p className="mt-3 text-sm text-destructive" role="alert">
           {error}
         </p>
+      ) : null}
+
+      {suggestions.length === 0 && !loading && !error ? (
+        <div
+          className="mt-4 flex justify-center py-2 sm:py-3"
+          aria-hidden
+        >
+          <KitchenIllustration
+            src="/illustrations/cooking-pot.svg"
+            alt=""
+            width={96}
+            height={88}
+            className="kitchen-illustration h-16 w-auto sm:h-20"
+          />
+        </div>
       ) : null}
 
       {suggestions.length > 0 ? (

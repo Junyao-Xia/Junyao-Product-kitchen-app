@@ -162,4 +162,9 @@
     @apply rounded-lg border border-border bg-card px-3 py-2.5;
     box-shadow: var(--shadow-kitchen);
   }
+
+  .kitchen-illustration {
+    opacity: 0.88;
+    user-select: none;
+  }
 }

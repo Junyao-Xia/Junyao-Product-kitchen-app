@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 112" fill="none" aria-hidden="true">
+  <!-- Open fridge -->
+  <rect x="8" y="20" width="52" height="76" rx="8" fill="#FFFCF8" stroke="#E5DDD0" stroke-width="2"/>
+  <rect x="14" y="28" width="40" height="28" rx="4" fill="#E3EED9" opacity="0.6"/>
+  <rect x="14" y="62" width="40" height="28" rx="4" fill="#E3EED9" opacity="0.45"/>
+  <path d="M60 24 L72 16 L72 96 L60 88 Z" fill="#FAF7F2" stroke="#E5DDD0" stroke-width="2"/>
+  <circle cx="54" cy="56" r="3" fill="#1B4332"/>
+  <!-- Smiling broccoli -->
+  <circle cx="88" cy="36" r="14" fill="#7CB342"/>
+  <circle cx="82" cy="28" r="6" fill="#8BC34A"/>
+  <circle cx="94" cy="28" r="6" fill="#8BC34A"/>
+  <circle cx="88" cy="22" r="5" fill="#8BC34A"/>
+  <rect x="84" y="48" width="8" height="14" rx="3" fill="#A5D06A"/>
+  <circle cx="84" cy="36" r="1.5" fill="#1A2E22"/>
+  <circle cx="92" cy="36" r="1.5" fill="#1A2E22"/>
+  <path d="M85 40 Q88 43 91 40" stroke="#1A2E22" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Smiling carrot -->
+  <ellipse cx="104" cy="68" rx="10" ry="16" fill="#F4A261" transform="rotate(-12 104 68)"/>
+  <path d="M104 50 Q106 44 108 48 Q110 44 112 50" stroke="#7CB342" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="100" cy="64" r="1.5" fill="#1A2E22"/>
+  <circle cx="108" cy="64" r="1.5" fill="#1A2E22"/>
+  <path d="M101 70 Q104 73 107 70" stroke="#1A2E22" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Smiling tomato -->
+  <circle cx="78" cy="78" r="12" fill="#E07A5F"/>
+  <path d="M78 64 Q82 60 86 64" stroke="#7CB342" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="74" cy="76" r="1.5" fill="#1A2E22"/>
+  <circle cx="82" cy="76" r="1.5" fill="#1A2E22"/>
+  <path d="M75 81 Q78 84 81 81" stroke="#1A2E22" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

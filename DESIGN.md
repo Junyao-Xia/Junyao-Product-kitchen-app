@@ -39,6 +39,19 @@ Tell Cursor: *Follow `DESIGN.md`. Use theme tokens only (`bg-primary`, `text-mut
 - Desktop: two columns — dinners and details left, ingredients right
 - Mobile: single column, dinners before ingredients
 
+## Illustrations
+
+Friendly cartoon SVGs in `public/illustrations/`. They sit beside or behind content — never replace labels, buttons, or recipe text.
+
+- **Style:** Soft fills, rounded shapes, simple faces optional; no gradients or neon.
+- **Palette (illustration-only):** Same family as the UI — cream `#FFFCF8` / `#FAF7F2`, dark green `#1B4332` outlines, muted `#4A5D52`, accent greens `#E3EED9` / `#7CB342`, warm tomato `#E07A5F`, carrot `#F4A261`, peach steam `#F5E0C8`, border `#E5DDD0`.
+- **Opacity:** Decorative images use the `.kitchen-illustration` class (~88% opacity).
+- **Placement:**
+  - Page hero: open fridge with smiling vegetables next to the main heading (`fridge-hero.svg`).
+  - AI suggestions: smiling pot when no AI dinners are shown yet (`cooking-pot.svg`); hidden while loading, on error, or after suggestions load.
+  - Add ingredient: small tomato, carrot, and egg around the panel edges (`deco-*.svg`), `pointer-events: none`, `aria-hidden`.
+- **Responsive:** Hero stacks above title on narrow screens; decor scales down on small viewports so forms stay readable.
+
 ## Components
 - **Nav:** top bar, cream background, thin bottom border, product name left
 - **Primary button:** solid dark green, white text, no gradient
@@ -55,5 +68,5 @@ Tell Cursor: *Follow `DESIGN.md`. Use theme tokens only (`bg-primary`, `text-mut
 ## Don’t
 - Gradients, glass, neon, or dark mode
 - Hardcoded hex in product components
-- Decorative illustrations unless asked
+- Illustrations that overpower text or block taps on mobile
 - Safety language on badges (dates are reminders only)

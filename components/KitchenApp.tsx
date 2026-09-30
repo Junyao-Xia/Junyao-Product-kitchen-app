@@ -5,6 +5,10 @@ import { IngredientItem } from "@/components/IngredientItem";
 import { KitchenPanel } from "@/components/KitchenPanel";
 import { SimplerDinnerHelper } from "@/components/SimplerDinnerHelper";
 import { SuggestDinnersSection } from "@/components/SuggestDinnersSection";
+import {
+  AddIngredientPanelDecor,
+  KitchenIllustration,
+} from "@/components/KitchenIllustration";
 import { ReminderDateNote } from "@/components/ReminderDateNote";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -150,14 +154,25 @@ export function KitchenApp({ seedIngredients, dinners }: KitchenAppProps) {
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-[2rem] md:leading-tight">
-          What can you cook tonight?
-        </h1>
-        <p className="mt-3 max-w-2xl text-base leading-relaxed text-foreground">
-          After class, see a twenty-minute dinner from the food you already have,
-          using whatever should be used soon first.
-        </p>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-[2rem] md:leading-tight">
+            What can you cook tonight?
+          </h1>
+          <p className="mt-3 max-w-2xl text-base leading-relaxed text-foreground">
+            After class, see a twenty-minute dinner from the food you already
+            have, using whatever should be used soon first.
+          </p>
+        </div>
+        <div className="flex shrink-0 justify-center sm:justify-end" aria-hidden>
+          <KitchenIllustration
+            src="/illustrations/fridge-hero.svg"
+            alt=""
+            width={128}
+            height={112}
+            className="kitchen-illustration h-20 w-auto sm:h-24 md:h-28"
+          />
+        </div>
       </header>
 
       <div className="grid gap-8 lg:grid-cols-2 lg:items-start lg:gap-10">
@@ -311,9 +326,10 @@ export function KitchenApp({ seedIngredients, dinners }: KitchenAppProps) {
             >
               Add ingredient
             </h2>
+            <AddIngredientPanelDecor>
             <form
               onSubmit={handleAddIngredient}
-              className="kitchen-panel mt-3 space-y-4 p-4 md:p-5"
+              className="kitchen-panel space-y-4 p-4 md:p-5"
             >
               <div className="space-y-2">
                 <Label htmlFor="new-name">Name</Label>
@@ -349,6 +365,7 @@ export function KitchenApp({ seedIngredients, dinners }: KitchenAppProps) {
                 Add ingredient
               </Button>
             </form>
+            </AddIngredientPanelDecor>
           </section>
 
           {!hasAvailable ? (
