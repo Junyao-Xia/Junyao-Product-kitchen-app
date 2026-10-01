@@ -52,7 +52,18 @@ export function isOneSkilletMeal(steps: string[]): boolean {
     return false;
   }
   const combined = steps.join(" ");
-  return ONE_PAN_PATTERN.test(combined) || SAME_VESSEL_PATTERN.test(combined);
+  return (
+    ONE_PAN_PATTERN.test(combined) ||
+    SAME_VESSEL_PATTERN.test(combined) ||
+    /\b(deep )?skillet\b/i.test(combined)
+  );
+}
+
+function effectiveCookwareCount(steps: string[]): number {
+  if (isOneSkilletMeal(steps)) {
+    return 1;
+  }
+  return countCookwareMentions(steps.join(" "));
 }
 
 export function isAlreadySimpleMeal(steps: string[]): boolean {
@@ -182,8 +193,8 @@ export function effortReducedVersusOriginal(
   if (simplifiedSteps.length === 0) {
     return false;
   }
-  const originalCookware = countCookwareMentions(originalSteps.join(" "));
-  const simplifiedCookware = countCookwareMentions(simplifiedSteps.join(" "));
+  const originalCookware = effectiveCookwareCount(originalSteps);
+  const simplifiedCookware = effectiveCookwareCount(simplifiedSteps);
   if (simplifiedCookware > originalCookware) {
     return false;
   }
