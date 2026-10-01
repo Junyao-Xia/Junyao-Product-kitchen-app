@@ -4,6 +4,7 @@ import {
   allowedSimplifyIngredientNames,
   parseSimplifyResponse,
 } from "@/lib/simplify-dinner";
+import { effortReducedVersusOriginal } from "@/lib/simplify-effort";
 import type { Dinner } from "@/lib/types";
 
 const chickenRice = (seedDinners as Dinner[]).find(
@@ -79,6 +80,14 @@ describe("simplify regressions (spec 004)", () => {
   });
 
   it("replaces a false two-pan claim with an honest shortcut summary for one-skillet chicken and rice", () => {
+    const simplifiedLines = [
+      "Add chicken, rice, water, and oil to a skillet. Cover and simmer until the rice is tender and the thickest part of the chicken reads 165°F (74°C) on a food thermometer.",
+      "Fluff and serve.",
+    ];
+    expect(
+      effortReducedVersusOriginal(chickenRice.steps, simplifiedLines),
+    ).toBe(true);
+
     const allowed = allowedSimplifyIngredientNames(chickenRice, [
       "Chicken",
       "Rice",
@@ -86,10 +95,7 @@ describe("simplify regressions (spec 004)", () => {
     const result = parseSimplifyResponse(
       JSON.stringify({
         alreadySimple: false,
-        lines: [
-          "Add chicken, rice, water, and oil to a skillet. Cover and simmer until the rice is tender and the thickest part of the chicken reads 165°F (74°C) on a food thermometer.",
-          "Fluff and serve.",
-        ],
+        lines: simplifiedLines,
         improvement: "Uses one pan instead of two.",
       }),
       allowed,
