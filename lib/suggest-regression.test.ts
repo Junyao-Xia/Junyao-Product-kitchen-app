@@ -180,7 +180,7 @@ describe("suggest regressions (spec 004)", () => {
     vi.unstubAllEnvs();
   });
 
-  it("returns first-pass meals when the corrective retry fails to parse", async () => {
+  it("returns first-pass meals without a second API call when the first pass already validates", async () => {
     vi.stubEnv("OPENAI_API_KEY", "test-key");
     const tripleChicken = {
       suggestions: [
@@ -206,8 +206,7 @@ describe("suggest regressions (spec 004)", () => {
     };
     const chatCompletion = vi
       .fn()
-      .mockResolvedValueOnce(JSON.stringify(tripleChicken))
-      .mockResolvedValueOnce("```json\n{ broken");
+      .mockResolvedValueOnce(JSON.stringify(tripleChicken));
 
     const result = await suggestDinnersWithOpenAI(
       [
@@ -240,7 +239,7 @@ describe("suggest regressions (spec 004)", () => {
       chatCompletion,
     );
 
-    expect(chatCompletion).toHaveBeenCalledTimes(2);
+    expect(chatCompletion).toHaveBeenCalledTimes(1);
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.suggestions.length).toBeGreaterThan(0);

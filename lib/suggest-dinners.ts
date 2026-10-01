@@ -17,7 +17,6 @@ import {
   buildMeatDiversityRetryHint,
   countMeatsInIngredientNames,
   meatDiversityPromptLines,
-  meetsMeatDiversityRules,
   type ApplyMeatDiversityResult,
 } from "@/lib/suggest-meat-diversity";
 import type {
@@ -522,25 +521,14 @@ export async function suggestDinnersWithOpenAI(
     let outcome = suggestFromModelRaw(raw, cookableNames, diversityPlan);
     let collected = outcome.suggestions;
 
-    const shouldRetryForRepeat =
-      collected.length > 0 &&
-      diversityPlan.cookableMeatCount >= 2 &&
-      !meetsMeatDiversityRules(collected, diversityPlan, cookableNames);
-
-    const shouldCorrect =
-      outcome.needsRetry ||
-      collected.length === 0 ||
-      shouldRetryForRepeat;
-
-    if (shouldCorrect) {
-      const firstPass = collected;
+    if (collected.length === 0) {
       raw = await chatCompletion(
         system,
         `${user}\n\nCorrection: ${outcome.retryHint}`,
         apiKey,
       );
       const secondOutcome = suggestFromModelRaw(raw, cookableNames, diversityPlan);
-      collected = mergeSuggestionLists(secondOutcome.suggestions, firstPass);
+      collected = mergeSuggestionLists(secondOutcome.suggestions, collected);
     }
 
     let diversity = applyMeatDiversity(collected, diversityPlan, cookableNames);
