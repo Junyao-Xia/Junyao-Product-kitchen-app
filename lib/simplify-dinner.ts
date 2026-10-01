@@ -131,7 +131,7 @@ function parsePlainSimplifyLines(raw: string): string[] {
     .filter(Boolean);
 }
 
-function validateSimplifyLines(
+export function validateSimplifyLines(
   lines: string[],
   allowedIngredientNames: string[],
   cookableIngredientNames: string[],
@@ -261,7 +261,10 @@ export function parseSimplifyResponse(
       ) {
         if (improvementClaimSupported(inferred, validated.lines, originalSteps)) {
           summary = inferred;
-        } else if (isAlreadySimpleMeal(originalSteps)) {
+        } else if (
+          isAlreadySimpleMeal(originalSteps) &&
+          !effortReducedVersusOriginal(originalSteps, validated.lines)
+        ) {
           return {
             ok: true,
             lines: [],

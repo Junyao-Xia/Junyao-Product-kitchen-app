@@ -3,6 +3,7 @@ import seedDinners from "@/data/dinners.json";
 import {
   allowedSimplifyIngredientNames,
   parseSimplifyResponse,
+  validateSimplifyLines,
 } from "@/lib/simplify-dinner";
 import { effortReducedVersusOriginal } from "@/lib/simplify-effort";
 import type { Dinner } from "@/lib/types";
@@ -92,6 +93,18 @@ describe("simplify regressions (spec 004)", () => {
       "Chicken",
       "Rice",
     ]);
+    const validated = validateSimplifyLines(
+      simplifiedLines,
+      allowed,
+      ["Chicken", "Rice"],
+      chickenRice.steps,
+    );
+    expect(validated.ok).toBe(true);
+    if (validated.ok) {
+      expect(validated.alreadySimple).not.toBe(true);
+      expect(validated.lines.length).toBeGreaterThan(0);
+    }
+
     const result = parseSimplifyResponse(
       JSON.stringify({
         alreadySimple: false,
