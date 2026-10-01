@@ -68,6 +68,7 @@ describe("KitchenApp", () => {
           JSON.stringify({
             ok: true,
             lines: ["Simmer rice first.", "Pan-fry chicken.", "Plate and eat."],
+            improvement: "Uses one pot instead of two pans.",
           }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         ),

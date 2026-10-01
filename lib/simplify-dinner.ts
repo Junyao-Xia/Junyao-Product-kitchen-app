@@ -1,4 +1,9 @@
 import { ASSUMED_PANTRY_STAPLES } from "@/lib/assumed-pantry";
+import {
+  effortReducedVersusOriginal,
+  improvementClaimSupported,
+  isAlreadySimpleMeal,
+} from "@/lib/simplify-effort";
 import { listCookableIngredientNames } from "@/lib/cookable-ingredients";
 import { fetchChatCompletion, getOpenAIApiKey } from "@/lib/openai";
 import { normalizeIngredientName } from "@/lib/dinners";
@@ -10,8 +15,8 @@ import {
 } from "@/lib/suggest-dinners";
 import type { Dinner, IngredientSnapshotItem } from "@/lib/types";
 
-export const MAX_SIMPLIFY_LINES = 6;
-export const MAX_SIMPLIFY_WORDS = 120;
+export const MAX_SIMPLIFY_LINES = 4;
+export const MAX_SIMPLIFY_WORDS = 80;
 
 export const SIMPLIFY_USER_ERROR =
   "Could not get a simpler version. Use the steps above.";
@@ -22,6 +27,8 @@ const SAFETY_PATTERN =
 export type SimplifySuccess = {
   ok: true;
   lines: string[];
+  improvement: string;
+  alreadySimple?: boolean;
 };
 
 export type SimplifyFailureReason =
@@ -31,7 +38,10 @@ export type SimplifyFailureReason =
   | "safety_language"
   | "too_few_steps"
   | "too_long"
-  | "step_ingredients";
+  | "step_ingredients"
+  | "missing_improvement"
+  | "unsupported_improvement"
+  | "no_effort_reduction";
 
 export type SimplifyFailure = {
   ok: false;
@@ -61,13 +71,16 @@ export function findDinnerById(
 export function buildSimplifySystemPrompt(): string {
   return [
     "You help a college student cook a quick dinner after class.",
-    "Rewrite the meal as simpler numbered steps using the listed available ingredients plus assumed staples: cooking oil, salt, and black pepper.",
-    "Do not use any other ingredients or seasonings.",
+    "Rewrite the meal to reduce effort: fewer prep steps, less cookware, or combined cooking when honest.",
+    "Prefer one-pan or one-pot methods when they still cook the food properly.",
+    "Use only the listed available ingredients plus assumed staples: cooking oil, salt, and black pepper.",
+    "Do not invent ingredients, skip necessary cooking, or claim a shorter time without justification.",
     "Target about 20 minutes total.",
-    "Use at most 6 short steps and at most 120 words.",
+    "Return JSON only, no markdown.",
+    'If the original is already minimal, return {"alreadySimple":true,"message":"…"} with a honest one-sentence explanation.',
+    'Otherwise return {"alreadySimple":false,"lines":["…"],"improvement":"One short sentence such as Uses one pan instead of two."}',
+    "Use at most 4 short steps and about 80 words total in lines.",
     "Do not mention food safety, spoilage, expiration, or whether ingredients are safe or unsafe.",
-    "Do not suggest buying new ingredients.",
-    "Return plain numbered steps only, one step per line.",
   ].join(" ");
 }
 
@@ -82,7 +95,7 @@ export function buildSimplifyUserPrompt(
     `Assumed staples (always OK): ${ASSUMED_PANTRY_STAPLES.join(", ")}`,
     "Original steps:",
     ...dinner.steps.map((step, index) => `${index + 1}. ${step}`),
-    "Write a simpler version.",
+    "Write a simpler version as JSON.",
   ].join("\n");
 }
 
@@ -99,24 +112,26 @@ export function allowedSimplifyIngredientNames(
   return [...new Set([...dishCookable, ...ASSUMED_PANTRY_STAPLES])];
 }
 
-export function parseSimplifyResponse(
-  raw: string,
-  allowedIngredientNames: string[],
-  cookableIngredientNames: string[],
-): SimplifyResult {
-  const trimmed = raw.trim();
-  if (!trimmed) {
-    return { ok: false, error: SIMPLIFY_USER_ERROR, reason: "empty_response" };
-  }
-  if (SAFETY_PATTERN.test(trimmed)) {
-    return { ok: false, error: SIMPLIFY_USER_ERROR, reason: "safety_language" };
-  }
+type RawSimplifyPayload = {
+  alreadySimple?: unknown;
+  message?: unknown;
+  lines?: unknown;
+  improvement?: unknown;
+};
 
-  const lines = trimmed
+function parsePlainSimplifyLines(raw: string): string[] {
+  return raw
     .split(/\r?\n/)
     .map((line) => line.replace(/^\s*\d+[\).\s]+/, "").trim())
     .filter(Boolean);
+}
 
+function validateSimplifyLines(
+  lines: string[],
+  allowedIngredientNames: string[],
+  cookableIngredientNames: string[],
+  originalSteps: string[],
+): SimplifyResult {
   if (lines.length < 2) {
     return { ok: false, error: SIMPLIFY_USER_ERROR, reason: "too_few_steps" };
   }
@@ -141,7 +156,120 @@ export function parseSimplifyResponse(
     return { ok: false, error: SIMPLIFY_USER_ERROR, reason: "step_ingredients" };
   }
 
-  return { ok: true, lines: limitedLines };
+  if (!effortReducedVersusOriginal(originalSteps, limitedLines)) {
+    return {
+      ok: false,
+      error: SIMPLIFY_USER_ERROR,
+      reason: "no_effort_reduction",
+    };
+  }
+
+  return { ok: true, lines: limitedLines, improvement: "" };
+}
+
+export function parseSimplifyResponse(
+  raw: string,
+  allowedIngredientNames: string[],
+  cookableIngredientNames: string[],
+  originalSteps: string[] = [],
+): SimplifyResult {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return { ok: false, error: SIMPLIFY_USER_ERROR, reason: "empty_response" };
+  }
+  if (SAFETY_PATTERN.test(trimmed)) {
+    return { ok: false, error: SIMPLIFY_USER_ERROR, reason: "safety_language" };
+  }
+
+  let payload: RawSimplifyPayload | null = null;
+  try {
+    payload = JSON.parse(trimmed) as RawSimplifyPayload;
+  } catch {
+    payload = null;
+  }
+
+  if (payload && typeof payload === "object") {
+    if (payload.alreadySimple === true) {
+      const message =
+        typeof payload.message === "string" ? payload.message.trim() : "";
+      if (!message || SAFETY_PATTERN.test(message)) {
+        return {
+          ok: false,
+          error: SIMPLIFY_USER_ERROR,
+          reason: "missing_improvement",
+        };
+      }
+      if (!isAlreadySimpleMeal(originalSteps)) {
+        return {
+          ok: false,
+          error: SIMPLIFY_USER_ERROR,
+          reason: "no_effort_reduction",
+        };
+      }
+      return {
+        ok: true,
+        lines: [],
+        improvement: message,
+        alreadySimple: true,
+      };
+    }
+
+    if (Array.isArray(payload.lines)) {
+      const lines = payload.lines
+        .filter((line): line is string => typeof line === "string")
+        .map((line) => line.trim())
+        .filter(Boolean);
+      const improvement =
+        typeof payload.improvement === "string"
+          ? payload.improvement.trim()
+          : "";
+      const validated = validateSimplifyLines(
+        lines,
+        allowedIngredientNames,
+        cookableIngredientNames,
+        originalSteps,
+      );
+      if (!validated.ok) {
+        return validated;
+      }
+      if (!improvement) {
+        return {
+          ok: false,
+          error: SIMPLIFY_USER_ERROR,
+          reason: "missing_improvement",
+        };
+      }
+      if (!improvementClaimSupported(improvement, validated.lines)) {
+        return {
+          ok: false,
+          error: SIMPLIFY_USER_ERROR,
+          reason: "unsupported_improvement",
+        };
+      }
+      return {
+        ok: true,
+        lines: validated.lines,
+        improvement,
+        alreadySimple: false,
+      };
+    }
+  }
+
+  const plain = parsePlainSimplifyLines(trimmed);
+  const validated = validateSimplifyLines(
+    plain,
+    allowedIngredientNames,
+    cookableIngredientNames,
+    originalSteps,
+  );
+  if (!validated.ok) {
+    return validated;
+  }
+  return {
+    ok: false,
+    error: SIMPLIFY_USER_ERROR,
+    reason: "missing_improvement",
+  };
 }
 
 export type ValidatedSeededSimplifyRequest = {
@@ -273,6 +401,12 @@ export type ChatCompletionFn = (
   apiKey: string,
 ) => Promise<string>;
 
+const SIMPLIFY_RETRY_REASONS: SimplifyFailureReason[] = [
+  "missing_improvement",
+  "unsupported_improvement",
+  "no_effort_reduction",
+];
+
 export async function simplifyMealWithOpenAI(
   meal: SimplifyMeal,
   cookableIngredientNames: string[],
@@ -283,17 +417,39 @@ export async function simplifyMealWithOpenAI(
     return { ok: false, error: SIMPLIFY_USER_ERROR, reason: "missing_api_key" };
   }
 
+  const allowed = allowedSimplifyIngredientNames(
+    meal,
+    cookableIngredientNames,
+  );
+  const system = buildSimplifySystemPrompt();
+  const user = buildSimplifyUserPrompt(meal, cookableIngredientNames);
+
   try {
-    const raw = await chatCompletion(
-      buildSimplifySystemPrompt(),
-      buildSimplifyUserPrompt(meal, cookableIngredientNames),
-      apiKey,
-    );
-    const allowed = allowedSimplifyIngredientNames(
-      meal,
+    let raw = await chatCompletion(system, user, apiKey);
+    let result = parseSimplifyResponse(
+      raw,
+      allowed,
       cookableIngredientNames,
+      meal.steps,
     );
-    return parseSimplifyResponse(raw, allowed, cookableIngredientNames);
+    if (
+      !result.ok &&
+      result.reason &&
+      SIMPLIFY_RETRY_REASONS.includes(result.reason)
+    ) {
+      raw = await chatCompletion(
+        system,
+        `${user}\n\nCorrection: include a supported improvement sentence and reduce cookware or steps honestly.`,
+        apiKey,
+      );
+      result = parseSimplifyResponse(
+        raw,
+        allowed,
+        cookableIngredientNames,
+        meal.steps,
+      );
+    }
+    return result;
   } catch {
     return { ok: false, error: SIMPLIFY_USER_ERROR, reason: "openai_error" };
   }

@@ -8,6 +8,14 @@ import { listCookableIngredientNames } from "@/lib/cookable-ingredients";
 import { isUseSoon } from "@/lib/ingredient-groups";
 import { fetchChatCompletion, getOpenAIApiKey } from "@/lib/openai";
 import { normalizeIngredientName } from "@/lib/dinners";
+import {
+  applyMeatDiversity,
+  buildMeatDiversityPlan,
+  countMeatsInIngredientNames,
+  meatDiversityPromptLines,
+  meetsMeatDiversityRules,
+  type ApplyMeatDiversityResult,
+} from "@/lib/suggest-meat-diversity";
 import type {
   AiDinnerSuggestion,
   Ingredient,
@@ -84,6 +92,8 @@ export function buildSuggestSystemPrompt(): string {
     `You may also use these assumed staples (user does not list them): ${ASSUMED_PANTRY_STAPLES.join(", ")}.`,
     "All other ingredients must come from the available list only.",
     "Prioritize using ingredients marked Use soon when possible.",
+    "Use at most one quick-select meat (Beef, Pork, Chicken, Duck) per suggestion — never combine multiple meats in one dish.",
+    "When several meats are available, vary the primary meat across suggestions instead of repeating the same meat.",
     "Each suggestion needs: name, minutes (integer), ingredientNames (from available plus optional assumed staples), steps (at least 2 short strings).",
     "Steps may use only ingredients from that suggestion's ingredientNames.",
     "Do not mention food safety, spoilage, or expiration.",
@@ -95,12 +105,14 @@ export function buildSuggestSystemPrompt(): string {
 export function buildSuggestUserPrompt(
   cookableNames: string[],
   useSoonNames: string[],
+  diversityLines: string[] = [],
 ): string {
   return [
     `Available ingredients: ${cookableNames.join(", ")}`,
     useSoonNames.length > 0
       ? `Use soon (prioritize): ${useSoonNames.join(", ")}`
       : "Use soon: none",
+    ...diversityLines,
     "Return dinner suggestions as JSON.",
   ].join("\n");
 }
@@ -222,6 +234,10 @@ export function validateSuggestItem(
     }
   }
   if (!hasCookableFromList || ingredientNames.length === 0) {
+    return null;
+  }
+
+  if (countMeatsInIngredientNames(ingredientNames) > 1) {
     return null;
   }
 
@@ -362,6 +378,31 @@ export function assignSuggestionIds(
   }));
 }
 
+function suggestFromModelRaw(
+  raw: string,
+  cookableNames: string[],
+  diversityPlan: ReturnType<typeof buildMeatDiversityPlan>,
+): SuggestResult | ApplyMeatDiversityResult {
+  const parsed = parseSuggestResponse(raw, cookableNames);
+  if (!parsed.ok) {
+    return parsed;
+  }
+  return applyMeatDiversity(parsed.suggestions, diversityPlan, cookableNames);
+}
+
+function diversityToSuggestResult(
+  diversity: ApplyMeatDiversityResult,
+): SuggestResult {
+  if (diversity.suggestions.length === 0) {
+    return { ok: false, error: SUGGEST_NONE_FIT_MESSAGE };
+  }
+  return {
+    ok: true,
+    suggestions: assignSuggestionIds(diversity.suggestions),
+    message: diversity.message,
+  };
+}
+
 export async function suggestDinnersWithOpenAI(
   ingredients: Ingredient[],
   today: string,
@@ -378,21 +419,42 @@ export async function suggestDinnersWithOpenAI(
   }
 
   const useSoonNames = listUseSoonIngredientNames(ingredients, today);
+  const diversityPlan = buildMeatDiversityPlan(cookableNames, useSoonNames);
+  const diversityLines = meatDiversityPromptLines(diversityPlan);
+  const system = buildSuggestSystemPrompt();
+  const user = buildSuggestUserPrompt(cookableNames, useSoonNames, diversityLines);
 
   try {
-    const raw = await chatCompletion(
-      buildSuggestSystemPrompt(),
-      buildSuggestUserPrompt(cookableNames, useSoonNames),
-      apiKey,
-    );
-    const parsed = parseSuggestResponse(raw, cookableNames);
-    if (!parsed.ok) {
-      return parsed;
+    let raw = await chatCompletion(system, user, apiKey);
+    let outcome = suggestFromModelRaw(raw, cookableNames, diversityPlan);
+    if ("ok" in outcome && outcome.ok === false) {
+      return outcome;
     }
-    return {
-      ok: true,
-      suggestions: assignSuggestionIds(parsed.suggestions),
-    };
+    let diversity = outcome as ApplyMeatDiversityResult;
+
+    const shouldRetryForRepeat =
+      diversity.suggestions.length > 0 &&
+      diversityPlan.cookableMeatCount >= 2 &&
+      !meetsMeatDiversityRules(
+        diversity.suggestions,
+        diversityPlan,
+        cookableNames,
+      );
+
+    if (diversity.needsRetry || shouldRetryForRepeat) {
+      raw = await chatCompletion(
+        system,
+        `${user}\n\nCorrection: ${diversity.retryHint}`,
+        apiKey,
+      );
+      outcome = suggestFromModelRaw(raw, cookableNames, diversityPlan);
+      if ("ok" in outcome && outcome.ok === false) {
+        return outcome;
+      }
+      diversity = outcome as ApplyMeatDiversityResult;
+    }
+
+    return diversityToSuggestResult(diversity);
   } catch {
     return { ok: false, error: SUGGEST_USER_ERROR };
   }

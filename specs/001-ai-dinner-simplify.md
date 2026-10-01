@@ -116,3 +116,4 @@ Independently verifiable. At least one box each for empty/error input and API fa
 | 2026-09-29 | Spec created. Display: keep original steps; AI block below. |
 | 2026-09-29 | Shipped: API route, helper UI, lib tests + screen tests; `npm test` (34 tests, lib coverage ~88%) and `npm run build` green. |
 | 2026-09-29 | Extended simplify to AI-selected dinners; server validates AI recipe + cookable snapshot; assumed staples; fingerprint stale guard. |
+| 2026-09-30 | Spec 004: JSON simplify response, ≤4 steps / ~80 words, effort validation, improvement sentence under **Simpler way**, one retry. |

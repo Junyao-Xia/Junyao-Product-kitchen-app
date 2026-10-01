@@ -24,6 +24,7 @@ export function SuggestDinnersSection({
   onSelectAi,
 }: SuggestDinnersSectionProps) {
   const [suggestions, setSuggestions] = useState<AiDinnerSuggestion[]>([]);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const fingerprintRef = useRef(buildIngredientFingerprint(ingredients));
@@ -34,6 +35,7 @@ export function SuggestDinnersSection({
     if (nextFingerprint !== fingerprintRef.current) {
       fingerprintRef.current = nextFingerprint;
       setSuggestions([]);
+      setInfoMessage(null);
       setError(null);
       setLoading(false);
     }
@@ -53,6 +55,7 @@ export function SuggestDinnersSection({
     const requestFingerprint = fingerprintRef.current;
     setLoading(true);
     setError(null);
+    setInfoMessage(null);
     setSuggestions([]);
 
     try {
@@ -78,6 +81,7 @@ export function SuggestDinnersSection({
         ok: boolean;
         suggestions?: AiDinnerSuggestion[];
         error?: string;
+        message?: string;
       };
 
       if (requestFingerprint !== fingerprintRef.current) {
@@ -94,6 +98,9 @@ export function SuggestDinnersSection({
         id: crypto.randomUUID(),
       }));
       setSuggestions(withIds);
+      if (payload.message?.trim()) {
+        setInfoMessage(payload.message.trim());
+      }
     } catch {
       if (requestFingerprint === fingerprintRef.current) {
         setError("Could not load dinner suggestions. Try again or use the dinners above.");
@@ -132,6 +139,12 @@ export function SuggestDinnersSection({
       {error ? (
         <p className="mt-3 text-sm text-destructive" role="alert">
           {error}
+        </p>
+      ) : null}
+
+      {infoMessage ? (
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          {infoMessage}
         </p>
       ) : null}
 
