@@ -20,7 +20,11 @@ describe("simplify regressions (spec 004)", () => {
       "1. Simmer rice in one pot.\n2. Pan-fry chicken in the same pot.\n3. Serve.",
       allowed,
       ["Chicken", "Rice"],
-      chickenRice.steps,
+      [
+        "Simmer rice in a pot.",
+        "Pan-fry chicken in a skillet.",
+        "Combine and serve.",
+      ],
     );
     expect(result.ok).toBe(true);
     if (result.ok) {

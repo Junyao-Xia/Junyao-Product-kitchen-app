@@ -47,11 +47,22 @@ export function claimsFewerPansThanBefore(improvement: string): boolean {
   return FEWER_PANS_CLAIM_PATTERN.test(improvement.trim());
 }
 
+export function isOneSkilletMeal(steps: string[]): boolean {
+  if (!originalUsesSingleCookingVessel(steps)) {
+    return false;
+  }
+  const combined = steps.join(" ");
+  return ONE_PAN_PATTERN.test(combined) || SAME_VESSEL_PATTERN.test(combined);
+}
+
 export function isAlreadySimpleMeal(steps: string[]): boolean {
   if (steps.length === 0) {
     return false;
   }
   const combined = steps.join(" ");
+  if (isOneSkilletMeal(steps)) {
+    return steps.length <= 4 && countCookwareMentions(combined) <= 2;
+  }
   if (!originalUsesSingleCookingVessel(steps)) {
     return steps.length <= 2 && countCookwareMentions(combined) <= 1;
   }
@@ -82,7 +93,7 @@ function hasRecognizedCookingShortcut(
   if (!removedBrowning && !removedPushAside) {
     return false;
   }
-  return /\b(same skillet|one skillet|one pan|one pot|together|cover and simmer|simmer)\b/i.test(
+  return /\b(same skillet|one skillet|to a skillet|in a skillet|one pan|one pot|together|cover and simmer|simmer)\b/i.test(
     simplifiedText,
   );
 }
@@ -179,7 +190,7 @@ export function effortReducedVersusOriginal(
   if (simplifiedCookware < originalCookware) {
     return true;
   }
-  if (isAlreadySimpleMeal(originalSteps)) {
+  if (isOneSkilletMeal(originalSteps)) {
     return hasRecognizedCookingShortcut(originalSteps, simplifiedSteps);
   }
   if (simplifiedSteps.length < originalSteps.length) {

@@ -4,6 +4,7 @@ import {
   effortReducedVersusOriginal,
   improvementClaimSupported,
   isAlreadySimpleMeal,
+  isOneSkilletMeal,
   originalUsesSingleCookingVessel,
 } from "@/lib/simplify-effort";
 import type { Dinner } from "@/lib/types";
@@ -28,6 +29,8 @@ describe("simplify effort", () => {
 
   it("detects when the original already uses one cooking vessel", () => {
     expect(originalUsesSingleCookingVessel(chickenRice.steps)).toBe(true);
+    expect(isOneSkilletMeal(chickenRice.steps)).toBe(true);
+    expect(isAlreadySimpleMeal(chickenRice.steps)).toBe(true);
   });
 
   it("rejects fewer-pan claims when the original already uses one skillet", () => {
