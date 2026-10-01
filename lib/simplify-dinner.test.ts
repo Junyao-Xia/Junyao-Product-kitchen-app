@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import seedDinners from "@/data/dinners.json";
 import {
   allowedSimplifyIngredientNames,
   buildSimplifyUserPrompt,
@@ -8,6 +9,10 @@ import {
   validateSimplifyRequest,
 } from "@/lib/simplify-dinner";
 import type { Dinner } from "@/lib/types";
+
+const seededChickenRice = (seedDinners as Dinner[]).find(
+  (item) => item.id === "dinner-chicken-rice",
+)!;
 
 const dinner: Dinner = {
   id: "dinner-chicken-rice",
