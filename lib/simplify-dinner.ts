@@ -1,10 +1,12 @@
 import { ASSUMED_PANTRY_STAPLES } from "@/lib/assumed-pantry";
 import {
   alreadySimpleMessage,
+  claimsFewerPansThanBefore,
   effortReducedVersusOriginal,
   improvementClaimSupported,
   inferDefaultImprovement,
   isAlreadySimpleMeal,
+  isOneSkilletMeal,
 } from "@/lib/simplify-effort";
 import { CHICKEN_COOKING_RULE_FOR_AI } from "@/lib/chicken-cooking";
 import { extractJsonPayload } from "@/lib/model-json";
@@ -246,6 +248,19 @@ export function parseSimplifyResponse(
       }
       if (validated.alreadySimple) {
         return validated;
+      }
+      if (
+        improvement &&
+        claimsFewerPansThanBefore(improvement) &&
+        isOneSkilletMeal(originalSteps) &&
+        validated.improvement
+      ) {
+        return {
+          ok: true,
+          lines: validated.lines,
+          improvement: validated.improvement,
+          alreadySimple: false,
+        };
       }
       const inferred = inferDefaultImprovement(originalSteps, validated.lines);
       let summary = improvement || validated.improvement || inferred;
