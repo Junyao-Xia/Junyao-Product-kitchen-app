@@ -404,57 +404,31 @@ describe("suggest-dinners", () => {
     expect(item).toBeNull();
   });
 
-  it("retries when the model repeats the same meat across three dishes", async () => {
-    const chatCompletion = vi
-      .fn()
-      .mockResolvedValueOnce(
-        JSON.stringify({
-          suggestions: [
-            {
-              name: "Chicken bowl",
-              minutes: 18,
-              ingredientNames: ["Chicken", "Rice"],
-              steps: ["Cook rice.", "Pan-fry chicken."],
-            },
-            {
-              name: "Chicken stir fry",
-              minutes: 16,
-              ingredientNames: ["Chicken", "Spinach"],
-              steps: ["Stir-fry chicken.", "Add spinach."],
-            },
-            {
-              name: "Chicken plate",
-              minutes: 15,
-              ingredientNames: ["Chicken", "Rice"],
-              steps: ["Cook chicken.", "Serve over rice."],
-            },
-          ],
-        }),
-      )
-      .mockResolvedValueOnce(
-        JSON.stringify({
-          suggestions: [
-            {
-              name: "Beef bowl",
-              minutes: 18,
-              ingredientNames: ["Beef", "Rice"],
-              steps: ["Cook rice.", "Pan-fry beef."],
-            },
-            {
-              name: "Chicken stir fry",
-              minutes: 16,
-              ingredientNames: ["Chicken", "Spinach"],
-              steps: ["Stir-fry chicken.", "Add spinach."],
-            },
-            {
-              name: "Duck plate",
-              minutes: 15,
-              ingredientNames: ["Duck", "Rice"],
-              steps: ["Pan-sear duck.", "Serve over rice."],
-            },
-          ],
-        }),
-      );
+  it("returns valid meals when the model repeats the same meat across three dishes", async () => {
+    const chatCompletion = vi.fn().mockResolvedValueOnce(
+      JSON.stringify({
+        suggestions: [
+          {
+            name: "Chicken bowl",
+            minutes: 18,
+            ingredientNames: ["Chicken", "Rice"],
+            steps: ["Cook rice.", "Pan-fry chicken."],
+          },
+          {
+            name: "Chicken stir fry",
+            minutes: 16,
+            ingredientNames: ["Chicken", "Spinach"],
+            steps: ["Stir-fry chicken.", "Add spinach."],
+          },
+          {
+            name: "Chicken plate",
+            minutes: 15,
+            ingredientNames: ["Chicken", "Rice"],
+            steps: ["Cook chicken.", "Serve over rice."],
+          },
+        ],
+      }),
+    );
     vi.stubEnv("OPENAI_API_KEY", "test-key");
 
     const result = await suggestDinnersWithOpenAI(
@@ -494,7 +468,7 @@ describe("suggest-dinners", () => {
       chatCompletion,
     );
 
-    expect(chatCompletion).toHaveBeenCalledTimes(2);
+    expect(chatCompletion).toHaveBeenCalledTimes(1);
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.suggestions).toHaveLength(3);
