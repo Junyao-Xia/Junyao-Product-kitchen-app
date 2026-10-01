@@ -145,6 +145,20 @@ describe("suggest meat diversity", () => {
     expect(result.suggestions).toHaveLength(1);
   });
 
+  it("skips duplicate dish names when building a diverse subset", () => {
+    const plan = buildMeatDiversityPlan(["Chicken", "Rice"], []);
+    const result = applyMeatDiversity(
+      [
+        meal("Chicken bowl", "Chicken"),
+        meal("Chicken bowl", "Chicken"),
+        meal("Chicken stir fry", "Chicken"),
+      ],
+      plan,
+      ["Chicken", "Rice"],
+    );
+    expect(result.suggestions).toHaveLength(2);
+  });
+
   it("drops multi-meat dishes and keeps both meats across the set", () => {
     const plan = buildMeatDiversityPlan(["Chicken", "Pork", "Rice"], []);
     const suggestions = [

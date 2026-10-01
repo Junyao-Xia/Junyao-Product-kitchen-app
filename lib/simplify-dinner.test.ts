@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import seedDinners from "@/data/dinners.json";
 import {
   allowedSimplifyIngredientNames,
+  buildSimplifySystemPrompt,
   buildSimplifyUserPrompt,
   parseSimplifyResponse,
   simplifyDinnerWithOpenAI,
@@ -8,6 +10,10 @@ import {
   validateSimplifyRequest,
 } from "@/lib/simplify-dinner";
 import type { Dinner } from "@/lib/types";
+
+const seededChickenRice = (seedDinners as Dinner[]).find(
+  (item) => item.id === "dinner-chicken-rice",
+)!;
 
 const dinner: Dinner = {
   id: "dinner-chicken-rice",
@@ -18,6 +24,12 @@ const dinner: Dinner = {
 };
 
 describe("simplify-dinner", () => {
+  it("tells the model not to claim fewer pans for an already one-skillet dinner", () => {
+    expect(buildSimplifySystemPrompt()).toContain(
+      "Never claim fewer pans if the original already cooks in one skillet",
+    );
+  });
+
   it("builds a prompt with dinner name, time, and cookable ingredients", () => {
     const prompt = buildSimplifyUserPrompt(dinner, ["Chicken", "Rice"]);
     expect(prompt).toContain("Chicken and rice");
@@ -232,10 +244,152 @@ describe("simplify-dinner", () => {
     vi.unstubAllEnvs();
   });
 
+  it("accepts plain numbered simplify steps when JSON parsing fails", () => {
+    const allowed = allowedSimplifyIngredientNames(dinner, ["Chicken", "Rice"]);
+    const result = parseSimplifyResponse(
+      "1. Simmer chicken and rice in one pot.\n2. Serve together.",
+      allowed,
+      ["Chicken", "Rice"],
+      [
+        "Cook rice in a pot.",
+        "Cook chicken in a skillet.",
+        "Combine and serve.",
+      ],
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("returns already simple JSON from the model", () => {
+    const allowed = allowedSimplifyIngredientNames(dinner, ["Chicken", "Rice"]);
+    const result = parseSimplifyResponse(
+      JSON.stringify({
+        alreadySimple: true,
+        message: "This recipe is already simple.",
+      }),
+      allowed,
+      ["Chicken", "Rice"],
+      dinner.steps,
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.alreadySimple).toBe(true);
+    }
+  });
+
+  it("replaces a false two-pan claim for seeded one-skillet chicken and rice", () => {
+    const allowed = allowedSimplifyIngredientNames(seededChickenRice, [
+      "Chicken",
+      "Rice",
+    ]);
+    const result = parseSimplifyResponse(
+      JSON.stringify({
+        alreadySimple: false,
+        lines: [
+          "Simmer chicken and rice with water in a skillet until done.",
+          "Serve.",
+        ],
+        improvement: "Uses one pan instead of two.",
+      }),
+      allowed,
+      ["Chicken", "Rice"],
+      seededChickenRice.steps,
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.improvement.toLowerCase()).not.toContain("instead of two");
+      expect(result.improvement.toLowerCase()).toMatch(/brown|skips|skillet/);
+    }
+  });
+
   it("returns a friendly error when the API key is missing", async () => {
     vi.stubEnv("OPENAI_API_KEY", "");
     const result = await simplifyDinnerWithOpenAI(dinner, ["Chicken"]);
     expect(result.ok).toBe(false);
     vi.unstubAllEnvs();
+  });
+
+  it("retries once when the first model response does not reduce effort", async () => {
+    const multiVesselDinner = {
+      ...dinner,
+      steps: [
+        "Simmer rice in a pot.",
+        "Pan-fry chicken in a skillet.",
+        "Combine and serve.",
+      ],
+    };
+    const chatCompletion = vi
+      .fn()
+      .mockResolvedValueOnce(
+        JSON.stringify({
+          alreadySimple: false,
+          lines: [
+            "Simmer rice in a pot.",
+            "Pan-fry chicken in a skillet.",
+            "Plate and serve.",
+          ],
+          improvement: "Uses one pot instead of separate pans.",
+        }),
+      )
+      .mockResolvedValueOnce(
+        JSON.stringify({
+          alreadySimple: false,
+          lines: [
+            "Simmer chicken and rice in one pot.",
+            "Season with salt and pepper.",
+            "Serve.",
+          ],
+          improvement: "Uses one pot instead of separate rice and chicken pans.",
+        }),
+      );
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+
+    const result = await simplifyDinnerWithOpenAI(
+      multiVesselDinner,
+      ["Chicken", "Rice"],
+      chatCompletion,
+    );
+
+    expect(chatCompletion).toHaveBeenCalledTimes(2);
+    expect(result.ok).toBe(true);
+    vi.unstubAllEnvs();
+  });
+
+  it("returns a friendly error when chat completion throws", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    const chatCompletion = vi.fn().mockRejectedValue(new Error("network"));
+    const result = await simplifyDinnerWithOpenAI(
+      dinner,
+      ["Chicken", "Rice"],
+      chatCompletion,
+    );
+    expect(result.ok).toBe(false);
+    vi.unstubAllEnvs();
+  });
+
+  it("rejects seeded simplify requests with missing or empty fields", () => {
+    expect(
+      isSimplifyRequestFailure(
+        validateSimplifyRequest({
+          dinnerId: "",
+          cookableIngredientNames: ["Chicken"],
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      isSimplifyRequestFailure(
+        validateSimplifyRequest({
+          dinnerId: "dinner-chicken-rice",
+          cookableIngredientNames: [],
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      isSimplifyRequestFailure(
+        validateSimplifyRequest({
+          dinnerId: "dinner-chicken-rice",
+          cookableIngredientNames: ["  "],
+        }),
+      ),
+    ).toBe(true);
   });
 });

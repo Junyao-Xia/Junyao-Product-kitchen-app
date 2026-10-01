@@ -14,7 +14,10 @@ describe("assumed pantry", () => {
   });
 
   it("resolves assumed staples without a list entry", () => {
+    expect(resolveAssumedPantryStaple("")).toBeNull();
     expect(resolveAssumedPantryStaple("salt")).toBe("Salt");
+    expect(resolveAssumedPantryStaple("oil")).toBe("Cooking oil");
+    expect(resolveAssumedPantryStaple("pepper")).toBe("Black pepper");
     expect(resolveAssumedPantryStaple("cooking oil")).toBe("Cooking oil");
     expect(resolveCookableOrAssumedPantryName("Salt", ["Rice"])).toBe("Salt");
   });

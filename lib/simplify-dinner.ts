@@ -1,10 +1,12 @@
 import { ASSUMED_PANTRY_STAPLES } from "@/lib/assumed-pantry";
 import {
   alreadySimpleMessage,
+  claimsFewerPansThanBefore,
   effortReducedVersusOriginal,
   improvementClaimSupported,
   inferDefaultImprovement,
   isAlreadySimpleMeal,
+  isOneSkilletMeal,
 } from "@/lib/simplify-effort";
 import { CHICKEN_COOKING_RULE_FOR_AI } from "@/lib/chicken-cooking";
 import { extractJsonPayload } from "@/lib/model-json";
@@ -82,7 +84,7 @@ export function buildSimplifySystemPrompt(): string {
     "Target about 20 minutes total.",
     "Return JSON only, no markdown.",
     'If the original is already minimal, return {"alreadySimple":true,"message":"…"} with a honest one-sentence explanation.',
-    'Otherwise return {"alreadySimple":false,"lines":["…"],"improvement":"One short sentence such as Uses one pan instead of two."}',
+    'Otherwise return {"alreadySimple":false,"lines":["…"],"improvement":"One honest sentence about what changed (fewer steps, fewer pans, or a clearer method). Never claim fewer pans if the original already cooks in one skillet or pot."}',
     "Use at most 4 short steps and about 80 words total in lines.",
     "Do not mention food safety, spoilage, expiration, or whether ingredients are safe or unsafe.",
     CHICKEN_COOKING_RULE_FOR_AI,
@@ -131,7 +133,7 @@ function parsePlainSimplifyLines(raw: string): string[] {
     .filter(Boolean);
 }
 
-function validateSimplifyLines(
+export function validateSimplifyLines(
   lines: string[],
   allowedIngredientNames: string[],
   cookableIngredientNames: string[],
@@ -247,8 +249,21 @@ export function parseSimplifyResponse(
       if (validated.alreadySimple) {
         return validated;
       }
-      const summary =
-        improvement || inferDefaultImprovement(originalSteps, validated.lines);
+      if (
+        improvement &&
+        claimsFewerPansThanBefore(improvement) &&
+        isOneSkilletMeal(originalSteps) &&
+        validated.improvement
+      ) {
+        return {
+          ok: true,
+          lines: validated.lines,
+          improvement: validated.improvement,
+          alreadySimple: false,
+        };
+      }
+      const inferred = inferDefaultImprovement(originalSteps, validated.lines);
+      let summary = improvement || validated.improvement || inferred;
       if (!summary) {
         return {
           ok: false,
@@ -256,7 +271,25 @@ export function parseSimplifyResponse(
           reason: "missing_improvement",
         };
       }
-      if (!improvementClaimSupported(summary, validated.lines)) {
+      if (
+        !improvementClaimSupported(summary, validated.lines, originalSteps)
+      ) {
+        summary = validated.improvement || inferred;
+      }
+      if (
+        !improvementClaimSupported(summary, validated.lines, originalSteps)
+      ) {
+        if (
+          isAlreadySimpleMeal(originalSteps) &&
+          !effortReducedVersusOriginal(originalSteps, validated.lines)
+        ) {
+          return {
+            ok: true,
+            lines: [],
+            improvement: alreadySimpleMessage(),
+            alreadySimple: true,
+          };
+        }
         return {
           ok: false,
           error: SIMPLIFY_USER_ERROR,
