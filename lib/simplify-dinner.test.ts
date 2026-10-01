@@ -28,6 +28,7 @@ describe("simplify-dinner", () => {
     expect(buildSimplifySystemPrompt()).toContain(
       "Never claim fewer pans if the original already cooks in one skillet",
     );
+    expect(buildSimplifySystemPrompt()).toContain("fewer transfers");
   });
 
   it("builds a prompt with dinner name, time, and cookable ingredients", () => {
@@ -276,7 +277,7 @@ describe("simplify-dinner", () => {
     }
   });
 
-  it("replaces a false two-pan claim for seeded one-skillet chicken and rice", () => {
+  it("accepts a valid one-pot claim for seeded chicken and rice with separate cookware", () => {
     const allowed = allowedSimplifyIngredientNames(seededChickenRice, [
       "Chicken",
       "Rice",
@@ -285,10 +286,11 @@ describe("simplify-dinner", () => {
       JSON.stringify({
         alreadySimple: false,
         lines: [
-          "Simmer chicken and rice with water in a skillet until done.",
+          "Season chicken and add it to a pot with rice and water.",
+          "Cover and simmer until the rice is tender and the chicken reads 165°F (74°C) on a food thermometer.",
           "Serve.",
         ],
-        improvement: "Uses one pan instead of two.",
+        improvement: "Uses one pot instead of a saucepan and skillet.",
       }),
       allowed,
       ["Chicken", "Rice"],
@@ -296,8 +298,8 @@ describe("simplify-dinner", () => {
     );
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.improvement.toLowerCase()).not.toContain("instead of two");
-      expect(result.improvement.toLowerCase()).toMatch(/brown|skips|skillet/);
+      expect(result.alreadySimple).not.toBe(true);
+      expect(result.improvement.toLowerCase()).toMatch(/one pot|fewer/);
     }
   });
 

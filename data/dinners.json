@@ -5,10 +5,10 @@
     "minutes": 20,
     "ingredientNames": ["Chicken", "Rice"],
     "steps": [
-      "Rinse 1 cup rice. Cut chicken into bite-size pieces and season with salt and pepper.",
-      "Heat 1 tbsp oil in a large deep skillet over medium-high. Brown chicken on all sides, then push it to the side of the pan.",
-      "Add the rice and 1½ cups water to the same skillet. Bring to a boil, cover, lower heat, and simmer about 12 minutes until the rice is tender and the thickest part of the chicken reads 165°F (74°C) on a food thermometer.",
-      "Fluff the rice, mix in the chicken, and serve."
+      "Rinse 1 cup rice. Slice chicken into thin strips and season with salt and pepper.",
+      "In a saucepan, bring 1½ cups water and the rice to a boil. Cover, lower heat, and simmer about 12 minutes until tender. Turn off the heat and leave covered.",
+      "While the rice cooks, heat oil in a large skillet over medium-high. Cook the chicken, stirring often, until browned and the thickest part reads 165°F (74°C) on a food thermometer.",
+      "Fluff the rice with a fork, fold in the chicken, and let sit 1 minute off heat before serving."
     ]
   },
   {
@@ -17,9 +17,10 @@
     "minutes": 20,
     "ingredientNames": ["Eggs", "Rice", "Onion"],
     "steps": [
-      "Cook rice if you do not have leftovers: simmer 1 cup rice in 1½ cups water, covered, for 12 minutes, then spread on a plate to cool slightly.",
-      "Dice half the onion. Beat 2 eggs with a pinch of salt.",
-      "Heat oil in a large skillet over medium-high. Scramble the eggs until just set, push to the side, add onion for 2 minutes, then stir in rice. Cook 3–4 minutes until hot. Season and serve."
+      "If the rice is not already cooked, simmer 1 cup rice in 1½ cups water in a saucepan, covered, for 12 minutes. Spread on a plate and cool 5 minutes so the grains stay separate in the pan.",
+      "Dice half the onion finely. Beat 2 eggs with a pinch of salt.",
+      "Heat oil in a large skillet over medium-high. Scramble the eggs until just set, transfer to a plate.",
+      "Add a little more oil to the skillet. Cook the onion 2 minutes, stir in the rice, and cook 3–4 minutes until hot. Fold the eggs back in, season with salt and pepper, and serve."
     ]
   },
   {
@@ -28,9 +29,11 @@
     "minutes": 20,
     "ingredientNames": ["Chicken", "Tortillas", "Onion"],
     "steps": [
-      "Slice chicken into thin strips. Season with salt and pepper.",
-      "Heat oil in a skillet over medium-high. Cook chicken strips, stirring often, until browned and the thickest part reads 165°F (74°C) on a food thermometer.",
-      "Warm tortillas in the dry skillet for 30 seconds per side. Slice onion thin, fill tortillas with chicken and onion, roll, and serve."
+      "Slice chicken into thin strips and season with salt and pepper. Slice half the onion into thin rings.",
+      "Heat oil in a skillet over medium-high. Cook the chicken, stirring often, until browned and the thickest part reads 165°F (74°C) on a food thermometer. Transfer to a plate and tent loosely.",
+      "In the same skillet, cook the onion 2 minutes until softened. Transfer to the plate with the chicken.",
+      "Steam the tortillas in a covered pot with a splash of water over medium heat until pliable, about 1 minute.",
+      "Fill tortillas with chicken and onion, roll tightly, and serve."
     ]
   },
   {
@@ -39,9 +42,11 @@
     "minutes": 15,
     "ingredientNames": ["Spinach", "Eggs"],
     "steps": [
-      "Rinse spinach and shake dry. Beat 2 eggs with salt and pepper.",
-      "Heat oil in a nonstick pan over medium. Add spinach and cook until wilted, about 2 minutes.",
-      "Pour in eggs, stir gently until softly set, about 3 minutes. Serve immediately."
+      "Rinse spinach and shake dry.",
+      "Beat 2 eggs with salt and pepper.",
+      "Heat oil in a nonstick pan over medium. Add spinach in handfuls and cook until fully wilted, about 3 minutes. Transfer the spinach to a plate.",
+      "Add a little more oil to the pan if needed. Pour in the eggs and stir gently until softly set, about 3 minutes.",
+      "Fold the wilted spinach back into the eggs, adjust seasoning, and serve right away."
     ]
   }
 ]
