@@ -373,6 +373,7 @@ describe("suggest-dinners", () => {
 
   it("propagates parse failure after chat completion returns unusable JSON", async () => {
     vi.stubEnv("OPENAI_API_KEY", "test-key");
+    const chatCompletion = vi.fn().mockResolvedValue("{not valid json");
     const result = await suggestDinnersWithOpenAI(
       [
         {
@@ -383,8 +384,9 @@ describe("suggest-dinners", () => {
         },
       ],
       "2026-09-29",
-      vi.fn().mockResolvedValue("{not valid json"),
+      chatCompletion,
     );
+    expect(chatCompletion).toHaveBeenCalledTimes(3);
     expect(result.ok).toBe(false);
     vi.unstubAllEnvs();
   });

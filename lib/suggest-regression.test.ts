@@ -120,6 +120,54 @@ describe("suggest regressions (spec 004)", () => {
     vi.unstubAllEnvs();
   });
 
+  it("uses a third model attempt when the first two return no valid suggestions", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    const valid = {
+      suggestions: [
+        {
+          name: "Pork fried rice",
+          minutes: 18,
+          ingredientNames: ["Pork", "Rice", "Eggs"],
+          steps: ["Scramble eggs.", "Stir-fry pork and rice with eggs."],
+        },
+      ],
+    };
+    const chatCompletion = vi
+      .fn()
+      .mockResolvedValueOnce("not json")
+      .mockResolvedValueOnce("{ broken")
+      .mockResolvedValueOnce(JSON.stringify(valid));
+
+    const result = await suggestDinnersWithOpenAI(
+      [
+        {
+          id: "1",
+          name: "Pork",
+          reminderDate: "2026-10-01",
+          status: "available",
+        },
+        {
+          id: "2",
+          name: "Rice",
+          reminderDate: "2026-10-02",
+          status: "available",
+        },
+        {
+          id: "3",
+          name: "Eggs",
+          reminderDate: "2026-10-03",
+          status: "available",
+        },
+      ],
+      "2026-10-01",
+      chatCompletion,
+    );
+
+    expect(chatCompletion).toHaveBeenCalledTimes(3);
+    expect(result.ok).toBe(true);
+    vi.unstubAllEnvs();
+  });
+
   it("retries when every first-pass suggestion fails validation and merges valid second-pass meals", async () => {
     vi.stubEnv("OPENAI_API_KEY", "test-key");
     const invalidMultiMeat = {

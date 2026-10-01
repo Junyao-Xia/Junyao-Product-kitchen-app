@@ -7,10 +7,16 @@ export function getOpenAIApiKey(): string | undefined {
   return key || undefined;
 }
 
+export type ChatCompletionOptions = {
+  /** Ask the API to return a JSON object (reduces markdown-wrapped payloads). */
+  jsonObject?: boolean;
+};
+
 export async function fetchChatCompletion(
   system: string,
   user: string,
   apiKey: string,
+  options: ChatCompletionOptions = {},
 ): Promise<string> {
   const response = await fetch(CHAT_COMPLETIONS_URL, {
     method: "POST",
@@ -25,6 +31,7 @@ export async function fetchChatCompletion(
         { role: "user", content: user },
       ],
       temperature: 0.4,
+      ...(options.jsonObject ? { response_format: { type: "json_object" } } : {}),
     }),
   });
 
