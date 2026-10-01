@@ -237,6 +237,23 @@ describe("simplify-dinner", () => {
     vi.unstubAllEnvs();
   });
 
+  it("returns already simple JSON from the model", () => {
+    const allowed = allowedSimplifyIngredientNames(dinner, ["Chicken", "Rice"]);
+    const result = parseSimplifyResponse(
+      JSON.stringify({
+        alreadySimple: true,
+        message: "This recipe is already simple.",
+      }),
+      allowed,
+      ["Chicken", "Rice"],
+      dinner.steps,
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.alreadySimple).toBe(true);
+    }
+  });
+
   it("replaces a false two-pan claim for seeded one-skillet chicken and rice", () => {
     const allowed = allowedSimplifyIngredientNames(seededChickenRice, [
       "Chicken",

@@ -131,6 +131,33 @@ describe("simplify effort", () => {
     );
   });
 
+  it("allows honest one-pan wording when the original used separate cookware", () => {
+    const original = [
+      "Simmer rice in a pot.",
+      "Pan-fry chicken in a skillet.",
+      "Serve.",
+    ];
+    expect(
+      improvementClaimSupported(
+        "Uses one pan for everything.",
+        ["Brown chicken, add rice, and simmer in one pan.", "Serve."],
+        original,
+      ),
+    ).toBe(true);
+  });
+
+  it("infers push-aside shortcut copy when that step is removed", () => {
+    expect(
+      inferDefaultImprovement(
+        [
+          "Brown chicken and push it to the side of the pan.",
+          "Add rice to the same skillet and simmer.",
+        ],
+        ["Simmer chicken and rice in one skillet.", "Serve."],
+      ),
+    ).toMatch(/pushing the meat aside/i);
+  });
+
   it("rejects effort reduction when simplified steps add extra cookware", () => {
     expect(effortReducedVersusOriginal(chickenRice.steps, [])).toBe(false);
     expect(
