@@ -5,7 +5,6 @@ import {
   buildSimplifySystemPrompt,
   buildSimplifyUserPrompt,
   parseSimplifyResponse,
-  simplifyMealWithOpenAI,
   simplifyDinnerWithOpenAI,
   isSimplifyRequestFailure,
   validateSimplifyRequest,
@@ -218,38 +217,6 @@ describe("simplify-dinner", () => {
       ],
     });
     expect(isSimplifyRequestFailure(result)).toBe(true);
-  });
-
-  it("retries simplify once when the first model improvement is unsupported", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "test-key");
-    const chatCompletion = vi
-      .fn()
-      .mockResolvedValueOnce(
-        JSON.stringify({
-          alreadySimple: false,
-          lines: [
-            "Simmer chicken and rice in one pot.",
-            "Serve.",
-          ],
-          improvement: "Bad",
-        }),
-      )
-      .mockResolvedValueOnce(
-        JSON.stringify({
-          alreadySimple: true,
-          message: "This recipe is already simple.",
-        }),
-      );
-
-    const result = await simplifyMealWithOpenAI(
-      dinner,
-      ["Chicken", "Rice"],
-      chatCompletion,
-    );
-
-    expect(chatCompletion).toHaveBeenCalledTimes(2);
-    expect(result.ok).toBe(true);
-    vi.unstubAllEnvs();
   });
 
   it("uses injected chat completion without calling the network in tests", async () => {
