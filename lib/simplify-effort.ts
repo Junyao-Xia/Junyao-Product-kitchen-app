@@ -10,6 +10,9 @@ const SAME_VESSEL_PATTERN =
 const FEWER_PANS_CLAIM_PATTERN =
   /\b(one pan|one pot|one skillet)\b.*\b(instead of|rather than)\b.*\b(two|2|separate|multiple)\b|\binstead of two pans?\b|\buses one pan instead of two\b|\bfewer pans?\b/i;
 
+const PLATE_TRANSFER_PATTERN =
+  /\b(transfer(?:s|red|ring)?|spread on a plate|to a plate|tent loosely)\b/i;
+
 export function countCookwareMentions(text: string): number {
   const matches = text.match(COOKWARE_PATTERN);
   if (!matches) {
@@ -45,6 +48,37 @@ export function originalUsesSingleCookingVessel(steps: string[]): boolean {
 
 export function claimsFewerPansThanBefore(improvement: string): boolean {
   return FEWER_PANS_CLAIM_PATTERN.test(improvement.trim());
+}
+
+export function countPlateTransferMentions(text: string): number {
+  const matches = text.match(
+    /\b(transfer(?:s|red|ring)?|spread on a plate|to a plate|tent loosely)\b/gi,
+  );
+  return matches?.length ?? 0;
+}
+
+/** One primary pan/skillet workflow with mid-recipe plate hops (not a second cooking vessel). */
+export function usesSingleCookingPanWithTransfers(steps: string[]): boolean {
+  const combined = steps.join(" ");
+  if (!/\b(pan|skillet|wok|nonstick pan)\b/i.test(combined)) {
+    return false;
+  }
+  if (countPlateTransferMentions(combined) === 0) {
+    return false;
+  }
+  const cookwareTypes = countCookwareMentions(combined);
+  if (cookwareTypes === 1) {
+    return true;
+  }
+  if (
+    cookwareTypes === 2 &&
+    /\bsaucepan\b/i.test(combined) &&
+    /\bskillet\b/i.test(combined) &&
+    /\bif the rice is not already cooked\b/i.test(combined)
+  ) {
+    return true;
+  }
+  return false;
 }
 
 export function isOneSkilletMeal(steps: string[]): boolean {
@@ -117,6 +151,14 @@ export function inferDefaultImprovement(
   const simplifiedText = simplifiedSteps.join(" ");
 
   if (
+    usesSingleCookingPanWithTransfers(originalSteps) &&
+    countPlateTransferMentions(simplifiedText) <
+      countPlateTransferMentions(originalText)
+  ) {
+    return "Skips extra plate transfers so you wash fewer dishes.";
+  }
+
+  if (
     simplifiedCookware < originalCookware &&
     !isOneSkilletMeal(originalSteps)
   ) {
@@ -156,13 +198,16 @@ export function improvementClaimSupported(
   if (
     originalSteps.length > 0 &&
     claimsFewerPansThanBefore(trimmed) &&
-    originalUsesSingleCookingVessel(originalSteps)
+    (originalUsesSingleCookingVessel(originalSteps) ||
+      (usesSingleCookingPanWithTransfers(originalSteps) &&
+        effectiveCookwareCount(simplifiedSteps) >=
+          effectiveCookwareCount(originalSteps)))
   ) {
     return false;
   }
 
   if (
-    /\b(fewer|fewer steps|less prep|combines|clearer|shorter|skips|aside)\b/i.test(
+    /\b(fewer|fewer steps|less prep|combines|clearer|shorter|skips|aside|transfer|dishes to wash|fewer dishes)\b/i.test(
       trimmed,
     )
   ) {
@@ -201,6 +246,13 @@ export function effortReducedVersusOriginal(
     return false;
   }
   if (simplifiedCookware < originalCookware) {
+    return true;
+  }
+  if (
+    usesSingleCookingPanWithTransfers(originalSteps) &&
+    countPlateTransferMentions(simplifiedSteps.join(" ")) <
+      countPlateTransferMentions(originalSteps.join(" "))
+  ) {
     return true;
   }
   if (isOneSkilletMeal(originalSteps)) {

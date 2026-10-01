@@ -9,11 +9,18 @@ import {
   isAlreadySimpleMeal,
   isOneSkilletMeal,
   originalUsesSingleCookingVessel,
+  usesSingleCookingPanWithTransfers,
 } from "@/lib/simplify-effort";
 import type { Dinner } from "@/lib/types";
 
 const chickenRice = (seedDinners as Dinner[]).find(
   (d) => d.id === "dinner-chicken-rice",
+)!;
+const eggFriedRice = (seedDinners as Dinner[]).find(
+  (d) => d.id === "dinner-egg-fried-rice",
+)!;
+const spinachEggs = (seedDinners as Dinner[]).find(
+  (d) => d.id === "dinner-spinach-eggs",
 )!;
 
 const oneSkilletChickenRice = [
@@ -221,6 +228,39 @@ describe("simplify effort", () => {
         ["Cook chicken and rice.", "Serve."],
       ),
     ).toBe("Combines the recipe into 2 short steps.");
+  });
+
+  it("detects one-pan seeded meals with plate transfers", () => {
+    expect(usesSingleCookingPanWithTransfers(spinachEggs.steps)).toBe(true);
+    expect(usesSingleCookingPanWithTransfers(eggFriedRice.steps)).toBe(true);
+  });
+
+  it("infers fewer-dishes copy when plate transfers are removed from one-pan workflows", () => {
+    expect(
+      inferDefaultImprovement(spinachEggs.steps, [
+        "Cook spinach and eggs together in one pan until the eggs are softly set.",
+        "Season and serve.",
+      ]),
+    ).toMatch(/transfer|dishes/i);
+    const sameCookwareFewerTransfers = [
+      "If needed, simmer rice in a saucepan, covered, for 12 minutes.",
+      "Scramble eggs in the skillet, add onion and rice, and cook until hot.",
+      "Season and serve.",
+    ];
+    expect(
+      improvementClaimSupported(
+        "Uses one pan instead of two.",
+        sameCookwareFewerTransfers,
+        eggFriedRice.steps,
+      ),
+    ).toBe(false);
+    expect(
+      improvementClaimSupported(
+        "Skips moving eggs to a plate so you wash fewer dishes.",
+        sameCookwareFewerTransfers,
+        eggFriedRice.steps,
+      ),
+    ).toBe(true);
   });
 
   it("rejects effort reduction when simplified steps add extra cookware", () => {

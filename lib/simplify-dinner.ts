@@ -7,6 +7,7 @@ import {
   inferDefaultImprovement,
   isAlreadySimpleMeal,
   isOneSkilletMeal,
+  usesSingleCookingPanWithTransfers,
 } from "@/lib/simplify-effort";
 import { CHICKEN_COOKING_RULE_FOR_AI } from "@/lib/chicken-cooking";
 import { extractJsonPayload } from "@/lib/model-json";
@@ -84,7 +85,7 @@ export function buildSimplifySystemPrompt(): string {
     "Target about 20 minutes total.",
     "Return JSON only, no markdown.",
     'If the original is already minimal, return {"alreadySimple":true,"message":"…"} with a honest one-sentence explanation.',
-    'Otherwise return {"alreadySimple":false,"lines":["…"],"improvement":"One honest sentence about what changed (fewer steps, fewer pans, or a clearer method). Never claim fewer pans if the original already cooks in one skillet or pot."}',
+    'Otherwise return {"alreadySimple":false,"lines":["…"],"improvement":"One honest sentence about what changed (fewer steps, fewer pans, or a clearer method). Never claim fewer pans if the original already cooks in one skillet or pot. If the original uses one pan but moves food to a plate mid-recipe, say fewer transfers or fewer dishes to wash—not fewer pans."}',
     "Use at most 4 short steps and about 80 words total in lines.",
     "Do not mention food safety, spoilage, expiration, or whether ingredients are safe or unsafe.",
     CHICKEN_COOKING_RULE_FOR_AI,
@@ -252,7 +253,8 @@ export function parseSimplifyResponse(
       if (
         improvement &&
         claimsFewerPansThanBefore(improvement) &&
-        isOneSkilletMeal(originalSteps) &&
+        (isOneSkilletMeal(originalSteps) ||
+          usesSingleCookingPanWithTransfers(originalSteps)) &&
         validated.improvement
       ) {
         return {

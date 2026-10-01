@@ -28,6 +28,7 @@ describe("simplify-dinner", () => {
     expect(buildSimplifySystemPrompt()).toContain(
       "Never claim fewer pans if the original already cooks in one skillet",
     );
+    expect(buildSimplifySystemPrompt()).toContain("fewer transfers");
   });
 
   it("builds a prompt with dinner name, time, and cookable ingredients", () => {
