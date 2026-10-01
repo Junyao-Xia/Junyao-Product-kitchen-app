@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import seedDinners from "@/data/dinners.json";
 import {
   allowedSimplifyIngredientNames,
+  buildSimplifySystemPrompt,
   buildSimplifyUserPrompt,
   parseSimplifyResponse,
+  simplifyMealWithOpenAI,
   simplifyDinnerWithOpenAI,
   isSimplifyRequestFailure,
   validateSimplifyRequest,
@@ -23,6 +25,12 @@ const dinner: Dinner = {
 };
 
 describe("simplify-dinner", () => {
+  it("tells the model not to claim fewer pans for an already one-skillet dinner", () => {
+    expect(buildSimplifySystemPrompt()).toContain(
+      "Never claim fewer pans if the original already cooks in one skillet",
+    );
+  });
+
   it("builds a prompt with dinner name, time, and cookable ingredients", () => {
     const prompt = buildSimplifyUserPrompt(dinner, ["Chicken", "Rice"]);
     expect(prompt).toContain("Chicken and rice");
@@ -212,6 +220,38 @@ describe("simplify-dinner", () => {
     expect(isSimplifyRequestFailure(result)).toBe(true);
   });
 
+  it("retries simplify once when the first model improvement is unsupported", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    const chatCompletion = vi
+      .fn()
+      .mockResolvedValueOnce(
+        JSON.stringify({
+          alreadySimple: false,
+          lines: [
+            "Simmer chicken and rice in one pot.",
+            "Serve.",
+          ],
+          improvement: "Uses one pan instead of two.",
+        }),
+      )
+      .mockResolvedValueOnce(
+        JSON.stringify({
+          alreadySimple: true,
+          message: "This recipe is already simple.",
+        }),
+      );
+
+    const result = await simplifyMealWithOpenAI(
+      seededChickenRice,
+      ["Chicken", "Rice"],
+      chatCompletion,
+    );
+
+    expect(chatCompletion).toHaveBeenCalledTimes(2);
+    expect(result.ok).toBe(true);
+    vi.unstubAllEnvs();
+  });
+
   it("uses injected chat completion without calling the network in tests", async () => {
     const chatCompletion = vi.fn().mockResolvedValue(
       JSON.stringify({
@@ -235,6 +275,21 @@ describe("simplify-dinner", () => {
     expect(result.ok).toBe(true);
     expect(chatCompletion).toHaveBeenCalledOnce();
     vi.unstubAllEnvs();
+  });
+
+  it("accepts plain numbered simplify steps when JSON parsing fails", () => {
+    const allowed = allowedSimplifyIngredientNames(dinner, ["Chicken", "Rice"]);
+    const result = parseSimplifyResponse(
+      "1. Simmer chicken and rice in one pot.\n2. Serve together.",
+      allowed,
+      ["Chicken", "Rice"],
+      [
+        "Cook rice in a pot.",
+        "Cook chicken in a skillet.",
+        "Combine and serve.",
+      ],
+    );
+    expect(result.ok).toBe(true);
   });
 
   it("returns already simple JSON from the model", () => {
