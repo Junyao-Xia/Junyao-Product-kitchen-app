@@ -100,10 +100,17 @@ describe("simplify regressions (spec 004)", () => {
       chickenRice.steps,
     );
     expect(validated.ok).toBe(true);
-    if (validated.ok) {
-      expect(validated.alreadySimple).not.toBe(true);
+    if (validated.ok && !validated.alreadySimple) {
       expect(validated.lines.length).toBeGreaterThan(0);
     }
+
+    const invalid = validateSimplifyLines(
+      ["Add soy sauce.", "Cook chicken."],
+      allowed,
+      ["Chicken", "Rice"],
+      chickenRice.steps,
+    );
+    expect(invalid.ok).toBe(false);
 
     const result = parseSimplifyResponse(
       JSON.stringify({

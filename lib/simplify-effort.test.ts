@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import seedDinners from "@/data/dinners.json";
 import {
   claimsFewerPansThanBefore,
+  effectiveCookwareCount,
   effortReducedVersusOriginal,
   inferDefaultImprovement,
   improvementClaimSupported,
@@ -156,6 +157,25 @@ describe("simplify effort", () => {
         ["Simmer chicken and rice in one skillet.", "Serve."],
       ),
     ).toMatch(/pushing the meat aside/i);
+  });
+
+  it("counts one-skillet meals as a single vessel for comparisons", () => {
+    expect(effectiveCookwareCount(chickenRice.steps)).toBe(1);
+    expect(
+      effectiveCookwareCount([
+        "Cook rice in a pot.",
+        "Cook chicken in a skillet.",
+      ]),
+    ).toBe(2);
+  });
+
+  it("accepts long generic improvement copy without a keyword", () => {
+    expect(
+      improvementClaimSupported(
+        "This version keeps the same ingredients with clearer steps.",
+        ["Simmer chicken and rice.", "Serve."],
+      ),
+    ).toBe(true);
   });
 
   it("rejects effort reduction when simplified steps add extra cookware", () => {
