@@ -6,6 +6,9 @@ import {
   validateSuggestRequest,
 } from "@/lib/suggest-dinners";
 
+/** Two sequential OpenAI calls can exceed the default 10s limit on Vercel. */
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   let body: unknown;
   try {

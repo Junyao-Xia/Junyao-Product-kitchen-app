@@ -386,7 +386,7 @@ describe("suggest-dinners", () => {
       "2026-09-29",
       chatCompletion,
     );
-    expect(chatCompletion).toHaveBeenCalledTimes(3);
+    expect(chatCompletion).toHaveBeenCalledTimes(2);
     expect(result.ok).toBe(false);
     vi.unstubAllEnvs();
   });
