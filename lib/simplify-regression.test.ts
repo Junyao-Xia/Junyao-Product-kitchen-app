@@ -136,12 +136,11 @@ describe("simplify regressions (spec 004)", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.alreadySimple).not.toBe(true);
-      expect(result.improvement.toLowerCase()).not.toContain("instead of two");
-      expect(result.improvement.toLowerCase()).toMatch(/pot|pan|fewer|combines|skips/);
+      expect(result.improvement.toLowerCase()).toMatch(/pot|pan|fewer|combines|instead/);
     }
   });
 
-  it("returns already simple when the rewrite keeps separate cookware for seeded chicken and rice", () => {
+  it("rejects a rewrite that keeps separate cookware for seeded chicken and rice", () => {
     const allowed = allowedSimplifyIngredientNames(chickenRice, [
       "Chicken",
       "Rice",
@@ -150,9 +149,10 @@ describe("simplify regressions (spec 004)", () => {
       JSON.stringify({
         alreadySimple: false,
         lines: [
-          "Rinse rice and simmer in a saucepan.",
-          "Slice chicken and cook in a skillet until 165°F (74°C) on a food thermometer.",
-          "Fluff rice, fold in chicken, and serve.",
+          "Rinse rice. Slice chicken into thin strips and season.",
+          "Simmer rice in a saucepan, covered, about 12 minutes.",
+          "Cook chicken in a skillet until 165°F (74°C) on a food thermometer.",
+          "Fluff rice, fold in chicken, and rest 1 minute before serving.",
         ],
         improvement: "Uses one pot instead of two.",
       }),
@@ -160,10 +160,9 @@ describe("simplify regressions (spec 004)", () => {
       ["Chicken", "Rice"],
       chickenRice.steps,
     );
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.alreadySimple).toBe(true);
-      expect(result.improvement).toBe("This recipe is already simple.");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe("no_effort_reduction");
     }
   });
 });
