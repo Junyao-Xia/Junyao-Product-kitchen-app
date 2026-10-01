@@ -150,7 +150,7 @@ describe("simplify effort", () => {
     expect(
       inferDefaultImprovement(
         [
-          "Brown chicken and push it to the side of the pan.",
+          "Cook chicken and push it to the side of the pan.",
           "Add rice to the same skillet and simmer.",
         ],
         ["Simmer chicken and rice in one skillet.", "Serve."],
