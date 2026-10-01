@@ -232,6 +232,31 @@ describe("simplify-dinner", () => {
     vi.unstubAllEnvs();
   });
 
+  it("replaces a false two-pan claim for seeded one-skillet chicken and rice", () => {
+    const allowed = allowedSimplifyIngredientNames(seededChickenRice, [
+      "Chicken",
+      "Rice",
+    ]);
+    const result = parseSimplifyResponse(
+      JSON.stringify({
+        alreadySimple: false,
+        lines: [
+          "Simmer chicken and rice with water in a skillet until done.",
+          "Serve.",
+        ],
+        improvement: "Uses one pan instead of two.",
+      }),
+      allowed,
+      ["Chicken", "Rice"],
+      seededChickenRice.steps,
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.improvement.toLowerCase()).not.toContain("instead of two");
+      expect(result.improvement.toLowerCase()).toMatch(/brown|skips|skillet/);
+    }
+  });
+
   it("returns a friendly error when the API key is missing", async () => {
     vi.stubEnv("OPENAI_API_KEY", "");
     const result = await simplifyDinnerWithOpenAI(dinner, ["Chicken"]);
