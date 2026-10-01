@@ -23,6 +23,8 @@ export function SimplerDinnerHelper({
   cookableIngredientNames,
 }: SimplerDinnerHelperProps) {
   const [lines, setLines] = useState<string[] | null>(null);
+  const [improvement, setImprovement] = useState<string | null>(null);
+  const [alreadySimple, setAlreadySimple] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -42,6 +44,8 @@ export function SimplerDinnerHelper({
   useEffect(() => {
     activeSelectionKeyRef.current = selectionKey;
     setLines(null);
+    setImprovement(null);
+    setAlreadySimple(false);
     setError(null);
     setLoading(false);
   }, [selectionKey]);
@@ -55,6 +59,8 @@ export function SimplerDinnerHelper({
     setLoading(true);
     setError(null);
     setLines(null);
+    setImprovement(null);
+    setAlreadySimple(false);
 
     const body =
       target.type === "seeded"
@@ -92,6 +98,8 @@ export function SimplerDinnerHelper({
       const payload = (await response.json()) as {
         ok: boolean;
         lines?: string[];
+        improvement?: string;
+        alreadySimple?: boolean;
         error?: string;
       };
 
@@ -99,7 +107,21 @@ export function SimplerDinnerHelper({
         return;
       }
 
-      if (!payload.ok || !payload.lines?.length) {
+      if (!payload.ok) {
+        setError(
+          payload.error ?? "Could not get a simpler version. Use the steps above.",
+        );
+        return;
+      }
+
+      if (payload.alreadySimple && payload.improvement) {
+        setAlreadySimple(true);
+        setImprovement(payload.improvement);
+        setLines([]);
+        return;
+      }
+
+      if (!payload.lines?.length || !payload.improvement?.trim()) {
         setError(
           payload.error ?? "Could not get a simpler version. Use the steps above.",
         );
@@ -107,6 +129,8 @@ export function SimplerDinnerHelper({
       }
 
       setLines(payload.lines);
+      setImprovement(payload.improvement.trim());
+      setAlreadySimple(false);
     } catch {
       if (requestKey === activeSelectionKeyRef.current) {
         setError("Could not get a simpler version. Use the steps above.");
@@ -136,16 +160,29 @@ export function SimplerDinnerHelper({
         </p>
       ) : null}
 
-      {lines && lines.length > 0 ? (
+      {improvement || (lines && lines.length > 0) ? (
         <div className="kitchen-panel mt-4 p-4">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Simpler way
           </h3>
-          <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-foreground">
-            {lines.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ol>
+          {alreadySimple ? (
+            <p className="mt-2 text-sm leading-relaxed text-foreground">
+              {improvement}
+            </p>
+          ) : (
+            <>
+              <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-foreground">
+                {lines?.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ol>
+              {improvement ? (
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  {improvement}
+                </p>
+              ) : null}
+            </>
+          )}
         </div>
       ) : null}
     </div>

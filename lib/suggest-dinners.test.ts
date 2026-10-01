@@ -381,6 +381,117 @@ describe("suggest-dinners", () => {
     vi.unstubAllEnvs();
   });
 
+  it("rejects suggestions that combine multiple meats", () => {
+    const item = validateSuggestItem(
+      {
+        name: "Mixed grill",
+        minutes: 18,
+        ingredientNames: ["Chicken", "Beef", "Rice"],
+        steps: ["Cook chicken and beef.", "Serve with rice."],
+      },
+      ["Chicken", "Beef", "Rice"],
+    );
+    expect(item).toBeNull();
+  });
+
+  it("retries when the model repeats the same meat across three dishes", async () => {
+    const chatCompletion = vi
+      .fn()
+      .mockResolvedValueOnce(
+        JSON.stringify({
+          suggestions: [
+            {
+              name: "Chicken bowl",
+              minutes: 18,
+              ingredientNames: ["Chicken", "Rice"],
+              steps: ["Cook rice.", "Pan-fry chicken."],
+            },
+            {
+              name: "Chicken stir fry",
+              minutes: 16,
+              ingredientNames: ["Chicken", "Spinach"],
+              steps: ["Stir-fry chicken.", "Add spinach."],
+            },
+            {
+              name: "Chicken plate",
+              minutes: 15,
+              ingredientNames: ["Chicken", "Rice"],
+              steps: ["Cook chicken.", "Serve over rice."],
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        JSON.stringify({
+          suggestions: [
+            {
+              name: "Beef bowl",
+              minutes: 18,
+              ingredientNames: ["Beef", "Rice"],
+              steps: ["Cook rice.", "Pan-fry beef."],
+            },
+            {
+              name: "Chicken stir fry",
+              minutes: 16,
+              ingredientNames: ["Chicken", "Spinach"],
+              steps: ["Stir-fry chicken.", "Add spinach."],
+            },
+            {
+              name: "Duck plate",
+              minutes: 15,
+              ingredientNames: ["Duck", "Rice"],
+              steps: ["Pan-sear duck.", "Serve over rice."],
+            },
+          ],
+        }),
+      );
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+
+    const result = await suggestDinnersWithOpenAI(
+      [
+        {
+          id: "1",
+          name: "Beef",
+          reminderDate: "2026-09-29",
+          status: "available",
+        },
+        {
+          id: "2",
+          name: "Chicken",
+          reminderDate: "2026-09-30",
+          status: "available",
+        },
+        {
+          id: "3",
+          name: "Duck",
+          reminderDate: "2026-10-01",
+          status: "available",
+        },
+        {
+          id: "4",
+          name: "Rice",
+          reminderDate: "2026-10-02",
+          status: "available",
+        },
+        {
+          id: "5",
+          name: "Spinach",
+          reminderDate: "2026-10-03",
+          status: "available",
+        },
+      ],
+      "2026-09-29",
+      chatCompletion,
+    );
+
+    expect(chatCompletion).toHaveBeenCalledTimes(2);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.suggestions).toHaveLength(3);
+    }
+    vi.unstubAllEnvs();
+  });
+
   it("accepts minutes provided as a numeric string", () => {
     const item = validateSuggestItem(
       {

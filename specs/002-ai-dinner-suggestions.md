@@ -151,3 +151,4 @@ Independently verifiable. Observable in the browser unless noted.
 | 2026-09-29 | Shipped: server step + pantry validation; `POST /api/dinners/suggest`; UI **Suggested for you**; tests + build green. |
 | 2026-09-29 | Assumed staples (cooking oil, salt, black pepper) in `lib/assumed-pantry.ts`; shared validation for suggest + simplify; UI note. |
 | 2026-09-29 | **Make it simpler** enabled on AI dinner detail (spec 001 extension); server validates AI recipe on simplify POST. |
+| 2026-09-30 | Spec 004: meat diversity prompts + post-validation, one retry, partial `message`; one meat per dish. |

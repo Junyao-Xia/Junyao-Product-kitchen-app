@@ -60,6 +60,7 @@ describe("SimplerDinnerHelper", () => {
         JSON.stringify({
           ok: true,
           lines: ["Stale step one.", "Stale step two."],
+          improvement: "Uses one pan instead of two.",
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
@@ -78,7 +79,11 @@ describe("SimplerDinnerHelper", () => {
   it("posts AI dinner payload with ingredient snapshot", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
-        JSON.stringify({ ok: true, lines: ["Step one.", "Step two."] }),
+        JSON.stringify({
+          ok: true,
+          lines: ["Step one.", "Step two."],
+          improvement: "Uses one pan instead of two.",
+        }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
     );
@@ -116,6 +121,39 @@ describe("SimplerDinnerHelper", () => {
     };
     expect(body.aiDinner?.name).toBe("Quick chicken");
     expect(body.dinnerId).toBeUndefined();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("shows the improvement sentence below simpler steps", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            ok: true,
+            lines: ["Cook everything in one skillet.", "Serve."],
+            improvement: "Uses one pan instead of two.",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+
+    const user = userEvent.setup();
+    render(
+      <SimplerDinnerHelper
+        target={{ type: "seeded", dinnerId: "dinner-a" }}
+        ingredients={ingredients}
+        today="2026-09-29"
+        cookableIngredientNames={["Chicken"]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Make it simpler" }));
+    expect(
+      await screen.findByText("Uses one pan instead of two."),
+    ).toBeInTheDocument();
 
     vi.unstubAllGlobals();
   });

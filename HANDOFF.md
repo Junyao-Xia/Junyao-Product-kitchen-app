@@ -4,8 +4,8 @@
 >
 > *Read `HANDOFF.md` first. Follow the reading order in § 3. Then do the Next session pickup — do not rebuild anything already shipped.*
 
-> **Snapshot date:** 2026-09-29 (session — simplify water-validation fix; manual simplify confirmed)
-> **Next session pickup:** Ask Junyao for the next slice (deploy, Neon, or new PRD/spec); read `PRD.md` § 4 and `specs/README.md`.
+> **Snapshot date:** 2026-09-30 (session — suggest meat diversity + simplify effort; preview branch pushed)
+> **Next session pickup:** Junyao reviews Vercel preview for spec 004; merge to `main` when approved; read `specs/004-suggest-diversity-simplify-effort.md`.
 
 > This is the living state snapshot. A fresh agent (or you, next week) reads it
 > first and re-orients in five minutes instead of re-deriving state. **Sections
@@ -43,13 +43,15 @@ These three files are the rails. Do not add extra `.mdc` files, Playwright, or C
 
 ## 4. Current state of the work — *updated each wrap*
 
-- Specs: **2 shipped** · 0 building · 0 planned (`specs/README.md`).
+- Specs: **4 shipped** on `main` through 003; **004** on preview branch `diversity-simplify-preview` pending review (`specs/README.md`).
 
 ### Shipped capabilities
 
 - **v1 home (`/`):** ingredient groups, add/edit → localStorage, up to three **seeded** dinners (`lib/dinners.ts`), dinner detail with steps.
 - **Spec 001 — Make it simpler:** `POST /api/dinners/simplify` · **seeded** `{ dinnerId, cookableIngredientNames }` or **AI** `{ aiDinner, today, ingredients[] }` — server recomputes cookable and validates AI recipe before OpenAI · **Simpler way** below original steps · `SimplerDinnerHelper.tsx` (`selectionKey` = dinner + ingredient fingerprint) · assumed staples (oil, salt, pepper) in prompts + step validation · **water** allowed in simplified steps as implicit cooking medium (`IMPLICIT_STEP_TERMS` in `lib/assumed-pantry.ts`) — not listed on the fridge · failed simplify responses log `reason` server-side (never the API key).
 - **Spec 002 — Suggest dinners:** **Suggested for you** · `POST /api/dinners/suggest` · `lib/assumed-pantry.ts` + `lib/suggest-dinners.ts` validation · UI pantry note · AI meals temporary (no localStorage, no Delete).
+- **Spec 003 — Meat quick-select:** Beef/Pork/Chicken/Duck buttons on **Add ingredient** (`lib/quick-select-meats.ts`, `validateAddIngredient`).
+- **Spec 004 (preview):** `lib/suggest-meat-diversity.ts` — one meat per AI dish, diversity retry, partial `message` · `lib/simplify-effort.ts` — simplify JSON, ≤4 steps / ~80 words, improvement line in `SimplerDinnerHelper`.
 
 ### Verification (what was actually run)
 

@@ -27,26 +27,43 @@ describe("simplify-dinner", () => {
     expect(prompt).toContain("Assumed staples");
   });
 
-  it("parses numbered simplify lines", () => {
+  it("parses JSON simplify responses with improvement", () => {
     const allowed = allowedSimplifyIngredientNames(dinner, ["Chicken", "Rice"]);
     const result = parseSimplifyResponse(
-      "1. Start rice.\n2. Cook chicken quickly.\n3. Serve together.",
+      JSON.stringify({
+        alreadySimple: false,
+        lines: [
+          "Simmer rice and pan-fry chicken in one pot.",
+          "Serve together.",
+        ],
+        improvement: "Uses one pot instead of separate rice and chicken pans.",
+      }),
       allowed,
       ["Chicken", "Rice"],
+      [
+        "Simmer rice in a pot.",
+        "Pan-fry chicken in a skillet.",
+        "Combine and serve.",
+      ],
     );
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.lines).toHaveLength(3);
-      expect(result.lines[0]).toBe("Start rice.");
+      expect(result.lines).toHaveLength(2);
+      expect(result.improvement).toContain("one pot");
     }
   });
 
   it("rejects safety language in the response", () => {
     const allowed = allowedSimplifyIngredientNames(dinner, ["Chicken", "Rice"]);
     const result = parseSimplifyResponse(
-      "1. The chicken is safe to eat.\n2. Cook it.",
+      JSON.stringify({
+        alreadySimple: false,
+        lines: ["The chicken is safe to eat.", "Cook it."],
+        improvement: "Uses one pan.",
+      }),
       allowed,
       ["Chicken", "Rice"],
+      dinner.steps,
     );
     expect(result.ok).toBe(false);
   });
@@ -54,9 +71,18 @@ describe("simplify-dinner", () => {
   it("allows water in simplified steps when cooking rice", () => {
     const allowed = allowedSimplifyIngredientNames(dinner, ["Chicken", "Rice"]);
     const result = parseSimplifyResponse(
-      "1. Simmer rice in water for 12 minutes.\n2. Pan-fry chicken with salt and oil.\n3. Serve.",
+      JSON.stringify({
+        alreadySimple: false,
+        lines: [
+          "Simmer rice in water for 12 minutes.",
+          "Pan-fry chicken with salt and oil in the same pan.",
+          "Serve.",
+        ],
+        improvement: "Combines cooking in one pan.",
+      }),
       allowed,
       ["Chicken", "Rice"],
+      dinner.steps,
     );
     expect(result.ok).toBe(true);
   });
@@ -64,9 +90,17 @@ describe("simplify-dinner", () => {
   it("allows assumed staples in simplified steps", () => {
     const allowed = allowedSimplifyIngredientNames(dinner, ["Chicken", "Rice"]);
     const result = parseSimplifyResponse(
-      "1. Season chicken with salt and pepper.\n2. Cook rice in a little oil.",
+      JSON.stringify({
+        alreadySimple: false,
+        lines: [
+          "Season chicken with salt and pepper.",
+          "Cook rice in a little oil.",
+        ],
+        improvement: "Keeps the same two quick steps.",
+      }),
       allowed,
       ["Chicken", "Rice"],
+      dinner.steps,
     );
     expect(result.ok).toBe(true);
   });
@@ -74,9 +108,14 @@ describe("simplify-dinner", () => {
   it("rejects simplify steps that mention unlisted seasonings", () => {
     const allowed = allowedSimplifyIngredientNames(dinner, ["Chicken", "Rice"]);
     const result = parseSimplifyResponse(
-      "1. Add soy sauce.\n2. Cook chicken.",
+      JSON.stringify({
+        alreadySimple: false,
+        lines: ["Add soy sauce.", "Cook chicken."],
+        improvement: "Uses one pan.",
+      }),
       allowed,
       ["Chicken", "Rice"],
+      dinner.steps,
     );
     expect(result.ok).toBe(false);
   });
@@ -86,10 +125,16 @@ describe("simplify-dinner", () => {
       " ",
     );
     const allowed = allowedSimplifyIngredientNames(dinner, ["Chicken", "Rice"]);
-    const result = parseSimplifyResponse(`1. ${words}\n2. Done.`, allowed, [
-      "Chicken",
-      "Rice",
-    ]);
+    const result = parseSimplifyResponse(
+      JSON.stringify({
+        alreadySimple: false,
+        lines: [words, "Done."],
+        improvement: "Uses one pan instead of two.",
+      }),
+      allowed,
+      ["Chicken", "Rice"],
+      dinner.steps,
+    );
     expect(result.ok).toBe(false);
   });
 
@@ -164,7 +209,15 @@ describe("simplify-dinner", () => {
 
   it("uses injected chat completion without calling the network in tests", async () => {
     const chatCompletion = vi.fn().mockResolvedValue(
-      "1. Simmer rice.\n2. Pan-fry chicken.\n3. Plate and eat.",
+      JSON.stringify({
+        alreadySimple: false,
+        lines: [
+          "Simmer rice and chicken together in one pot.",
+          "Season with salt and pepper.",
+          "Plate and eat.",
+        ],
+        improvement: "Uses one pot instead of separate pans.",
+      }),
     );
     vi.stubEnv("OPENAI_API_KEY", "test-key");
 
