@@ -406,6 +406,16 @@ export type ChatCompletionFn = (
   apiKey: string,
 ) => Promise<string>;
 
+const MAX_SUGGEST_MODEL_ATTEMPTS = 3;
+
+async function defaultSuggestChatCompletion(
+  system: string,
+  user: string,
+  apiKey: string,
+): Promise<string> {
+  return fetchChatCompletion(system, user, apiKey, { jsonObject: true });
+}
+
 export function assignSuggestionIds(
   suggestions: AiDinnerSuggestion[],
 ): AiDinnerSuggestion[] {
@@ -491,7 +501,7 @@ function mergeSuggestionLists(
 export async function suggestDinnersWithOpenAI(
   ingredients: Ingredient[],
   today: string,
-  chatCompletion: ChatCompletionFn = fetchChatCompletion,
+  chatCompletion: ChatCompletionFn = defaultSuggestChatCompletion,
 ): Promise<SuggestResult> {
   const cookableNames = listCookableIngredientNames(ingredients, today);
   if (cookableNames.length === 0) {
@@ -511,46 +521,51 @@ export async function suggestDinnersWithOpenAI(
 
   try {
     let raw = await chatCompletion(system, user, apiKey);
-    let diversity = suggestFromModelRaw(raw, cookableNames, diversityPlan);
+    let outcome = suggestFromModelRaw(raw, cookableNames, diversityPlan);
+    let collected = outcome.suggestions;
 
     const shouldRetryForRepeat =
-      diversity.suggestions.length > 0 &&
+      collected.length > 0 &&
       diversityPlan.cookableMeatCount >= 2 &&
-      !meetsMeatDiversityRules(
-        diversity.suggestions,
-        diversityPlan,
-        cookableNames,
-      );
+      !meetsMeatDiversityRules(collected, diversityPlan, cookableNames);
 
-    const shouldRetry =
-      diversity.needsRetry ||
-      diversity.suggestions.length === 0 ||
+    const shouldCorrect =
+      outcome.needsRetry ||
+      collected.length === 0 ||
       shouldRetryForRepeat;
 
-    if (shouldRetry) {
-      const firstPass = diversity.suggestions;
+    if (shouldCorrect) {
+      const firstPass = collected;
       raw = await chatCompletion(
         system,
-        `${user}\n\nCorrection: ${diversity.retryHint}`,
+        `${user}\n\nCorrection: ${outcome.retryHint}`,
         apiKey,
       );
       const secondOutcome = suggestFromModelRaw(raw, cookableNames, diversityPlan);
-      const merged = mergeSuggestionLists(
-        secondOutcome.suggestions,
-        firstPass,
+      collected = mergeSuggestionLists(secondOutcome.suggestions, firstPass);
+    }
+
+    if (collected.length === 0) {
+      raw = await chatCompletion(
+        system,
+        `${user}\n\nCorrection: ${SUGGEST_PARSE_RETRY_HINT}`,
+        apiKey,
       );
-      diversity = applyMeatDiversity(merged, diversityPlan, cookableNames);
-      if (diversity.suggestions.length === 0 && merged.length > 0) {
-        diversity = {
-          suggestions: merged.slice(0, MAX_SUGGESTIONS),
-          needsRetry: false,
-          retryHint: diversity.retryHint,
-          message: buildMeatDiversityPartialMessage(
-            Math.min(merged.length, MAX_SUGGESTIONS),
-            diversityPlan,
-          ),
-        };
-      }
+      const thirdOutcome = suggestFromModelRaw(raw, cookableNames, diversityPlan);
+      collected = mergeSuggestionLists(thirdOutcome.suggestions, collected);
+    }
+
+    let diversity = applyMeatDiversity(collected, diversityPlan, cookableNames);
+    if (diversity.suggestions.length === 0 && collected.length > 0) {
+      diversity = {
+        suggestions: collected.slice(0, MAX_SUGGESTIONS),
+        needsRetry: false,
+        retryHint: diversity.retryHint,
+        message: buildMeatDiversityPartialMessage(
+          Math.min(collected.length, MAX_SUGGESTIONS),
+          diversityPlan,
+        ),
+      };
     }
 
     return diversityToSuggestResult(
