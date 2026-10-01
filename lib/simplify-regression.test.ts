@@ -5,7 +5,10 @@ import {
   parseSimplifyResponse,
   validateSimplifyLines,
 } from "@/lib/simplify-dinner";
-import { effortReducedVersusOriginal } from "@/lib/simplify-effort";
+import {
+  effortReducedVersusOriginal,
+  isAlreadySimpleMeal,
+} from "@/lib/simplify-effort";
 import type { Dinner } from "@/lib/types";
 
 const chickenRice = (seedDinners as Dinner[]).find(
@@ -13,6 +16,13 @@ const chickenRice = (seedDinners as Dinner[]).find(
 )!;
 
 describe("simplify regressions (spec 004)", () => {
+  it("treats each seeded dinner as eligible for meaningful simplification", () => {
+    for (const dinner of seedDinners as Dinner[]) {
+      expect(dinner.steps.length).toBeGreaterThanOrEqual(4);
+      expect(isAlreadySimpleMeal(dinner.steps)).toBe(false);
+    }
+  });
+
   it("accepts plain numbered steps without JSON", () => {
     const allowed = allowedSimplifyIngredientNames(chickenRice, [
       "Chicken",
@@ -55,7 +65,7 @@ describe("simplify regressions (spec 004)", () => {
     }
   });
 
-  it("falls back to already simple when effort cannot be reduced", () => {
+  it("accepts an honest one-pot rewrite for seeded chicken and rice", () => {
     const allowed = allowedSimplifyIngredientNames(chickenRice, [
       "Chicken",
       "Rice",
@@ -64,11 +74,11 @@ describe("simplify regressions (spec 004)", () => {
       JSON.stringify({
         alreadySimple: false,
         lines: [
-          "Rinse rice and simmer in a pot.",
-          "Cut chicken and pan-fry in a skillet.",
-          "Fluff rice and serve with chicken.",
+          "Cut chicken into bite-size pieces and season with salt and pepper.",
+          "Add chicken, rice, and 1½ cups water to one pot. Cover and simmer until the rice is tender and the thickest part of the chicken reads 165°F (74°C) on a food thermometer.",
+          "Serve.",
         ],
-        improvement: "Uses one pot instead of two.",
+        improvement: "Uses one pot instead of a saucepan and skillet.",
       }),
       allowed,
       ["Chicken", "Rice"],
@@ -76,14 +86,15 @@ describe("simplify regressions (spec 004)", () => {
     );
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.alreadySimple).toBe(true);
+      expect(result.alreadySimple).not.toBe(true);
+      expect(result.improvement.toLowerCase()).toMatch(/one pot|fewer pan/);
     }
   });
 
-  it("replaces a false two-pan claim with an honest shortcut summary for one-skillet chicken and rice", () => {
+  it("replaces a false two-pan claim with an honest shortcut summary for one-pot chicken and rice", () => {
     const simplifiedLines = [
-      "Add chicken, rice, water, and oil to a skillet. Cover and simmer until the rice is tender and the thickest part of the chicken reads 165°F (74°C) on a food thermometer.",
-      "Fluff and serve.",
+      "Add chicken, rice, water, and oil to one pot. Cover and simmer until the rice is tender and the thickest part of the chicken reads 165°F (74°C) on a food thermometer.",
+      "Serve.",
     ];
     expect(
       effortReducedVersusOriginal(chickenRice.steps, simplifiedLines),
@@ -126,11 +137,11 @@ describe("simplify regressions (spec 004)", () => {
     if (result.ok) {
       expect(result.alreadySimple).not.toBe(true);
       expect(result.improvement.toLowerCase()).not.toContain("instead of two");
-      expect(result.improvement.toLowerCase()).toMatch(/brown|skips|aside|skillet/);
+      expect(result.improvement.toLowerCase()).toMatch(/pot|pan|fewer|combines|skips/);
     }
   });
 
-  it("returns already simple when the rewrite does not reduce a one-skillet seeded meal", () => {
+  it("returns already simple when the rewrite keeps separate cookware for seeded chicken and rice", () => {
     const allowed = allowedSimplifyIngredientNames(chickenRice, [
       "Chicken",
       "Rice",
@@ -139,11 +150,11 @@ describe("simplify regressions (spec 004)", () => {
       JSON.stringify({
         alreadySimple: false,
         lines: [
-          "Rinse rice and cut chicken.",
-          "Brown chicken in a skillet, then push it aside.",
-          "Add rice and water to the same skillet, simmer, and serve.",
+          "Rinse rice and simmer in a saucepan.",
+          "Slice chicken and cook in a skillet until 165°F (74°C) on a food thermometer.",
+          "Fluff rice, fold in chicken, and serve.",
         ],
-        improvement: "Uses one pan instead of two.",
+        improvement: "Uses one pot instead of two.",
       }),
       allowed,
       ["Chicken", "Rice"],

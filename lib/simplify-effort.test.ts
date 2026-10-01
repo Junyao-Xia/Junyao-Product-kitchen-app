@@ -16,6 +16,13 @@ const chickenRice = (seedDinners as Dinner[]).find(
   (d) => d.id === "dinner-chicken-rice",
 )!;
 
+const oneSkilletChickenRice = [
+  "Rinse rice and cut chicken into bite-size pieces. Season with salt and pepper.",
+  "Heat oil in a large deep skillet over medium-high. Brown chicken on all sides, then push it to the side of the pan.",
+  "Add rice and water to the same skillet. Cover and simmer until the rice is tender and the chicken reads 165°F (74°C) on a food thermometer.",
+  "Fluff the rice, mix in the chicken, and serve.",
+];
+
 describe("simplify effort", () => {
   it("detects already-simple meals", () => {
     expect(isAlreadySimpleMeal(["Season chicken.", "Pan-fry in one pan."])).toBe(
@@ -30,10 +37,16 @@ describe("simplify effort", () => {
     ).toBe(false);
   });
 
+  it("detects when seeded chicken and rice uses separate cookware", () => {
+    expect(originalUsesSingleCookingVessel(chickenRice.steps)).toBe(false);
+    expect(isOneSkilletMeal(chickenRice.steps)).toBe(false);
+    expect(isAlreadySimpleMeal(chickenRice.steps)).toBe(false);
+  });
+
   it("detects when the original already uses one cooking vessel", () => {
-    expect(originalUsesSingleCookingVessel(chickenRice.steps)).toBe(true);
-    expect(isOneSkilletMeal(chickenRice.steps)).toBe(true);
-    expect(isAlreadySimpleMeal(chickenRice.steps)).toBe(true);
+    expect(originalUsesSingleCookingVessel(oneSkilletChickenRice)).toBe(true);
+    expect(isOneSkilletMeal(oneSkilletChickenRice)).toBe(true);
+    expect(isAlreadySimpleMeal(oneSkilletChickenRice)).toBe(true);
   });
 
   it("rejects fewer-pan claims when the original already uses one skillet", () => {
@@ -44,7 +57,7 @@ describe("simplify effort", () => {
           "Simmer chicken and rice in one skillet.",
           "Serve.",
         ],
-        chickenRice.steps,
+        oneSkilletChickenRice,
       ),
     ).toBe(false);
     expect(
@@ -54,7 +67,7 @@ describe("simplify effort", () => {
           "Simmer chicken and rice in one skillet.",
           "Serve.",
         ],
-        chickenRice.steps,
+        oneSkilletChickenRice,
       ),
     ).toBe(true);
   });
@@ -100,7 +113,7 @@ describe("simplify effort", () => {
 
   it("does not treat shorter rewrites as effort reduction for already-simple one-skillet meals", () => {
     expect(
-      effortReducedVersusOriginal(chickenRice.steps, [
+      effortReducedVersusOriginal(oneSkilletChickenRice, [
         "Season chicken and rinse rice.",
         "Simmer chicken and rice in the same skillet until done.",
         "Serve.",
@@ -110,8 +123,17 @@ describe("simplify effort", () => {
 
   it("allows a recognized shortcut when browning is removed from one-skillet chicken and rice", () => {
     expect(
-      effortReducedVersusOriginal(chickenRice.steps, [
+      effortReducedVersusOriginal(oneSkilletChickenRice, [
         "Add chicken, rice, and water to a skillet and simmer until the chicken reads 165°F (74°C) on a food thermometer.",
+        "Serve.",
+      ]),
+    ).toBe(true);
+  });
+
+  it("treats combining saucepan and skillet into one pot as effort reduction for seeded chicken and rice", () => {
+    expect(
+      effortReducedVersusOriginal(chickenRice.steps, [
+        "Add chicken, rice, water, and oil to one pot. Cover and simmer until the rice is tender and the thickest part of the chicken reads 165°F (74°C) on a food thermometer.",
         "Serve.",
       ]),
     ).toBe(true);
@@ -119,7 +141,7 @@ describe("simplify effort", () => {
 
   it("infers skip-browning copy instead of fewer-pans for one-skillet chicken and rice", () => {
     expect(
-      inferDefaultImprovement(chickenRice.steps, [
+      inferDefaultImprovement(oneSkilletChickenRice, [
         "Simmer chicken and rice together in a skillet.",
         "Serve.",
       ]),
@@ -160,7 +182,8 @@ describe("simplify effort", () => {
   });
 
   it("counts one-skillet meals as a single vessel for comparisons", () => {
-    expect(effectiveCookwareCount(chickenRice.steps)).toBe(1);
+    expect(effectiveCookwareCount(oneSkilletChickenRice)).toBe(1);
+    expect(effectiveCookwareCount(chickenRice.steps)).toBe(2);
     expect(
       effectiveCookwareCount([
         "Cook rice in a pot.",
@@ -201,9 +224,9 @@ describe("simplify effort", () => {
   });
 
   it("rejects effort reduction when simplified steps add extra cookware", () => {
-    expect(effortReducedVersusOriginal(chickenRice.steps, [])).toBe(false);
+    expect(effortReducedVersusOriginal(oneSkilletChickenRice, [])).toBe(false);
     expect(
-      effortReducedVersusOriginal(chickenRice.steps, [
+      effortReducedVersusOriginal(oneSkilletChickenRice, [
         "Boil rice in a pot.",
         "Fry chicken in a skillet.",
         "Serve.",
