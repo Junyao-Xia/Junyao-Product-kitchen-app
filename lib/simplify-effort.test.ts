@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import seedDinners from "@/data/dinners.json";
 import {
+  claimsFewerPansThanBefore,
   effortReducedVersusOriginal,
+  inferDefaultImprovement,
   improvementClaimSupported,
   isAlreadySimpleMeal,
   isOneSkilletMeal,
@@ -112,5 +114,31 @@ describe("simplify effort", () => {
         "Serve.",
       ]),
     ).toBe(true);
+  });
+
+  it("infers skip-browning copy instead of fewer-pans for one-skillet chicken and rice", () => {
+    expect(
+      inferDefaultImprovement(chickenRice.steps, [
+        "Simmer chicken and rice together in a skillet.",
+        "Serve.",
+      ]),
+    ).toMatch(/Skips browning/i);
+    expect(claimsFewerPansThanBefore("Uses one pan instead of two.")).toBe(
+      true,
+    );
+    expect(improvementClaimSupported("", ["Step one.", "Step two."])).toBe(
+      false,
+    );
+  });
+
+  it("rejects effort reduction when simplified steps add extra cookware", () => {
+    expect(effortReducedVersusOriginal(chickenRice.steps, [])).toBe(false);
+    expect(
+      effortReducedVersusOriginal(chickenRice.steps, [
+        "Boil rice in a pot.",
+        "Fry chicken in a skillet.",
+        "Serve.",
+      ]),
+    ).toBe(false);
   });
 });
