@@ -6,6 +6,7 @@ import {
   inferDefaultImprovement,
   isAlreadySimpleMeal,
 } from "@/lib/simplify-effort";
+import { CHICKEN_COOKING_RULE_FOR_AI } from "@/lib/chicken-cooking";
 import { extractJsonPayload } from "@/lib/model-json";
 import { listCookableIngredientNames } from "@/lib/cookable-ingredients";
 import { fetchChatCompletion, getOpenAIApiKey } from "@/lib/openai";
@@ -84,6 +85,7 @@ export function buildSimplifySystemPrompt(): string {
     'Otherwise return {"alreadySimple":false,"lines":["…"],"improvement":"One short sentence such as Uses one pan instead of two."}',
     "Use at most 4 short steps and about 80 words total in lines.",
     "Do not mention food safety, spoilage, expiration, or whether ingredients are safe or unsafe.",
+    CHICKEN_COOKING_RULE_FOR_AI,
   ].join(" ");
 }
 

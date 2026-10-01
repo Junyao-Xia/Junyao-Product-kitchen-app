@@ -8,6 +8,7 @@ import { listCookableIngredientNames } from "@/lib/cookable-ingredients";
 import { isUseSoon } from "@/lib/ingredient-groups";
 import { fetchChatCompletion, getOpenAIApiKey } from "@/lib/openai";
 import { normalizeIngredientName } from "@/lib/dinners";
+import { CHICKEN_COOKING_RULE_FOR_AI } from "@/lib/chicken-cooking";
 import { extractJsonPayload } from "@/lib/model-json";
 import {
   applyMeatDiversity,
@@ -102,6 +103,7 @@ export function buildSuggestSystemPrompt(): string {
     "Each suggestion needs: name, minutes (integer), ingredientNames (from available plus optional assumed staples), steps (at least 2 short strings).",
     "Steps may use only ingredients from that suggestion's ingredientNames.",
     "Do not mention food safety, spoilage, or expiration.",
+    CHICKEN_COOKING_RULE_FOR_AI,
     "If nothing honest fits, return suggestions as [] and set unableReason to a short plain explanation.",
     'JSON shape: {"suggestions":[...],"unableReason":null|string}',
   ].join(" ");
