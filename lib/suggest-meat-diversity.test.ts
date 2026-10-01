@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   applyMeatDiversity,
+  buildMeatDiversityPartialMessage,
   buildMeatDiversityPlan,
   countMeatsInIngredientNames,
+  meatDiversityPromptLines,
   meetsMeatDiversityRules,
   prioritizeMeatsForSuggest,
   primaryMeatForSuggestion,
+  stepsIntroduceExtraMeats,
 } from "@/lib/suggest-meat-diversity";
 import type { AiDinnerSuggestion } from "@/lib/types";
 
@@ -86,6 +89,60 @@ describe("suggest meat diversity", () => {
       primaryMeatForSuggestion(item, ["Beef", "Chicken", "Duck", "Rice"]),
     );
     expect(new Set(primaries).size).toBeGreaterThanOrEqual(2);
+  });
+
+  it("builds prompt lines for each meat-count tier", () => {
+    expect(
+      meatDiversityPromptLines(
+        buildMeatDiversityPlan(["Beef", "Chicken", "Duck"], []),
+      ).some((line) => line.includes("different primary meat")),
+    ).toBe(true);
+    expect(
+      meatDiversityPromptLines(
+        buildMeatDiversityPlan(["Chicken", "Pork", "Rice"], []),
+      ).some((line) => line.includes("both cookable meats")),
+    ).toBe(true);
+    expect(
+      meatDiversityPromptLines(
+        buildMeatDiversityPlan(["Chicken", "Rice"], []),
+      ).some((line) => line.includes("vary dish style")),
+    ).toBe(true);
+    expect(meatDiversityPromptLines(buildMeatDiversityPlan(["Rice"], []))).toEqual(
+      [],
+    );
+  });
+
+  it("formats partial-result copy for fewer than three meals", () => {
+    const plan = buildMeatDiversityPlan(["Beef", "Chicken", "Duck"], []);
+    expect(buildMeatDiversityPartialMessage(2, plan)).toContain("Showing 2");
+  });
+
+  it("detects extra meats mentioned only in steps", () => {
+    expect(
+      stepsIntroduceExtraMeats(
+        ["Pan-fry beef and chicken together."],
+        ["Beef"],
+        ["Beef", "Chicken"],
+      ),
+    ).toBe(true);
+  });
+
+  it("falls back to raw suggestions when every dish fails the single-meat rule", () => {
+    const plan = buildMeatDiversityPlan(["Chicken", "Pork"], []);
+    const result = applyMeatDiversity(
+      [
+        {
+          id: "",
+          name: "Combo",
+          minutes: 18,
+          ingredientNames: ["Chicken", "Pork"],
+          steps: ["Cook chicken and pork.", "Serve."],
+        },
+      ],
+      plan,
+      ["Chicken", "Pork"],
+    );
+    expect(result.suggestions).toHaveLength(1);
   });
 
   it("drops multi-meat dishes and keeps both meats across the set", () => {

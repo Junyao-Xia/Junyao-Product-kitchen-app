@@ -49,6 +49,31 @@ describe("simplify regressions (spec 004)", () => {
     }
   });
 
+  it("falls back to already simple when effort cannot be reduced", () => {
+    const allowed = allowedSimplifyIngredientNames(chickenRice, [
+      "Chicken",
+      "Rice",
+    ]);
+    const result = parseSimplifyResponse(
+      JSON.stringify({
+        alreadySimple: false,
+        lines: [
+          "Rinse rice and simmer in a pot.",
+          "Cut chicken and pan-fry in a skillet.",
+          "Fluff rice and serve with chicken.",
+        ],
+        improvement: "Uses one pot instead of two.",
+      }),
+      allowed,
+      ["Chicken", "Rice"],
+      chickenRice.steps,
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.alreadySimple).toBe(true);
+    }
+  });
+
   it("unwraps markdown JSON from the model", () => {
     const allowed = allowedSimplifyIngredientNames(chickenRice, [
       "Chicken",
