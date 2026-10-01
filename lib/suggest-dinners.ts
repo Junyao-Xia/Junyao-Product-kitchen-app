@@ -406,8 +406,6 @@ export type ChatCompletionFn = (
   apiKey: string,
 ) => Promise<string>;
 
-const MAX_SUGGEST_MODEL_ATTEMPTS = 3;
-
 async function defaultSuggestChatCompletion(
   system: string,
   user: string,
@@ -543,16 +541,6 @@ export async function suggestDinnersWithOpenAI(
       );
       const secondOutcome = suggestFromModelRaw(raw, cookableNames, diversityPlan);
       collected = mergeSuggestionLists(secondOutcome.suggestions, firstPass);
-    }
-
-    if (collected.length === 0) {
-      raw = await chatCompletion(
-        system,
-        `${user}\n\nCorrection: ${SUGGEST_PARSE_RETRY_HINT}`,
-        apiKey,
-      );
-      const thirdOutcome = suggestFromModelRaw(raw, cookableNames, diversityPlan);
-      collected = mergeSuggestionLists(thirdOutcome.suggestions, collected);
     }
 
     let diversity = applyMeatDiversity(collected, diversityPlan, cookableNames);
