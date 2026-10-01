@@ -307,4 +307,89 @@ describe("simplify-dinner", () => {
     expect(result.ok).toBe(false);
     vi.unstubAllEnvs();
   });
+
+  it("retries once when the first model response does not reduce effort", async () => {
+    const multiVesselDinner = {
+      ...dinner,
+      steps: [
+        "Simmer rice in a pot.",
+        "Pan-fry chicken in a skillet.",
+        "Combine and serve.",
+      ],
+    };
+    const chatCompletion = vi
+      .fn()
+      .mockResolvedValueOnce(
+        JSON.stringify({
+          alreadySimple: false,
+          lines: [
+            "Simmer rice in a pot.",
+            "Pan-fry chicken in a skillet.",
+            "Plate and serve.",
+          ],
+          improvement: "Uses one pot instead of separate pans.",
+        }),
+      )
+      .mockResolvedValueOnce(
+        JSON.stringify({
+          alreadySimple: false,
+          lines: [
+            "Simmer chicken and rice in one pot.",
+            "Season with salt and pepper.",
+            "Serve.",
+          ],
+          improvement: "Uses one pot instead of separate rice and chicken pans.",
+        }),
+      );
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+
+    const result = await simplifyDinnerWithOpenAI(
+      multiVesselDinner,
+      ["Chicken", "Rice"],
+      chatCompletion,
+    );
+
+    expect(chatCompletion).toHaveBeenCalledTimes(2);
+    expect(result.ok).toBe(true);
+    vi.unstubAllEnvs();
+  });
+
+  it("returns a friendly error when chat completion throws", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    const chatCompletion = vi.fn().mockRejectedValue(new Error("network"));
+    const result = await simplifyDinnerWithOpenAI(
+      dinner,
+      ["Chicken", "Rice"],
+      chatCompletion,
+    );
+    expect(result.ok).toBe(false);
+    vi.unstubAllEnvs();
+  });
+
+  it("rejects seeded simplify requests with missing or empty fields", () => {
+    expect(
+      isSimplifyRequestFailure(
+        validateSimplifyRequest({
+          dinnerId: "",
+          cookableIngredientNames: ["Chicken"],
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      isSimplifyRequestFailure(
+        validateSimplifyRequest({
+          dinnerId: "dinner-chicken-rice",
+          cookableIngredientNames: [],
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      isSimplifyRequestFailure(
+        validateSimplifyRequest({
+          dinnerId: "dinner-chicken-rice",
+          cookableIngredientNames: ["  "],
+        }),
+      ),
+    ).toBe(true);
+  });
 });

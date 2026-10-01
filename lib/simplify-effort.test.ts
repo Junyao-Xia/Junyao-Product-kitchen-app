@@ -178,6 +178,28 @@ describe("simplify effort", () => {
     ).toBe(true);
   });
 
+  it("infers fewer-pan copy when simplified steps drop a second vessel", () => {
+    expect(
+      inferDefaultImprovement(
+        [
+          "Simmer rice in a pot.",
+          "Pan-fry chicken in a skillet.",
+          "Serve.",
+        ],
+        ["Brown chicken, add rice, and simmer in one pan.", "Serve."],
+      ),
+    ).toBe("Uses fewer pans than the original steps.");
+  });
+
+  it("infers combined-step copy when the rewrite is shorter but not a skillet shortcut", () => {
+    expect(
+      inferDefaultImprovement(
+        ["Prep chicken.", "Prep rice.", "Cook chicken.", "Cook rice.", "Serve."],
+        ["Cook chicken and rice.", "Serve."],
+      ),
+    ).toBe("Combines the recipe into 2 short steps.");
+  });
+
   it("rejects effort reduction when simplified steps add extra cookware", () => {
     expect(effortReducedVersusOriginal(chickenRice.steps, [])).toBe(false);
     expect(
