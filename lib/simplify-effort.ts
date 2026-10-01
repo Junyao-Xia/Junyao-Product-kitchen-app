@@ -52,6 +52,9 @@ export function isAlreadySimpleMeal(steps: string[]): boolean {
     return false;
   }
   const combined = steps.join(" ");
+  if (!originalUsesSingleCookingVessel(steps)) {
+    return steps.length <= 2 && countCookwareMentions(combined) <= 1;
+  }
   if (steps.length <= 3 && countCookwareMentions(combined) <= 1) {
     return true;
   }
