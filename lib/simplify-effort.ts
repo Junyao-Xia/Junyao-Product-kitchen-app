@@ -27,7 +27,20 @@ export function originalUsesSingleCookingVessel(steps: string[]): boolean {
   if (ONE_PAN_PATTERN.test(combined) || SAME_VESSEL_PATTERN.test(combined)) {
     return true;
   }
-  return countCookwareMentions(combined) <= 1;
+  const cookwareCount = countCookwareMentions(combined);
+  if (cookwareCount === 0) {
+    return false;
+  }
+  if (cookwareCount > 1) {
+    return false;
+  }
+  const separateRiceAndProtein =
+    (/\b(cook|simmer|boil)\s+(the\s+)?rice\b/i.test(combined) ||
+      /\bcook rice\b/i.test(combined)) &&
+    (/\b(cook|pan-fry|fry|sear)\s+(the\s+)?chicken\b/i.test(combined) ||
+      /\bcook chicken\b/i.test(combined)) &&
+    !SAME_VESSEL_PATTERN.test(combined);
+  return !separateRiceAndProtein;
 }
 
 export function claimsFewerPansThanBefore(improvement: string): boolean {
@@ -52,18 +65,23 @@ function hasRecognizedCookingShortcut(
   if (simplifiedSteps.length >= originalSteps.length) {
     return false;
   }
+  if (simplifiedSteps.length > originalSteps.length - 2) {
+    return false;
+  }
   const originalText = originalSteps.join(" ");
   const simplifiedText = simplifiedSteps.join(" ");
-  if (/\bbrown(ed|ing)?\b/i.test(originalText) && !/\bbrown(ed|ing)?\b/i.test(simplifiedText)) {
-    return true;
-  }
-  if (
+  const removedBrowning =
+    /\bbrown(ed|ing)?\b/i.test(originalText) &&
+    !/\bbrown(ed|ing)?\b/i.test(simplifiedText);
+  const removedPushAside =
     /\bpush (it )?to the side\b/i.test(originalText) &&
-    !/\bpush (it )?to the side\b/i.test(simplifiedText)
-  ) {
-    return true;
+    !/\bpush (it )?to the side\b/i.test(simplifiedText);
+  if (!removedBrowning && !removedPushAside) {
+    return false;
   }
-  return false;
+  return /\b(same skillet|one skillet|one pan|one pot|together|cover and simmer|simmer)\b/i.test(
+    simplifiedText,
+  );
 }
 
 export function inferDefaultImprovement(
