@@ -66,15 +66,20 @@ export function usesSingleCookingPanWithTransfers(steps: string[]): boolean {
   if (countPlateTransferMentions(combined) === 0) {
     return false;
   }
+  if (
+    /\bskillet\b/i.test(combined) &&
+    /\bif the rice is not already cooked\b/i.test(combined)
+  ) {
+    return true;
+  }
   const cookwareTypes = countCookwareMentions(combined);
   if (cookwareTypes === 1) {
     return true;
   }
   if (
-    cookwareTypes === 2 &&
     /\bsaucepan\b/i.test(combined) &&
     /\bskillet\b/i.test(combined) &&
-    /\bif the rice is not already cooked\b/i.test(combined)
+    /\b(pan|skillet|wok|nonstick pan)\b/i.test(combined)
   ) {
     return true;
   }
