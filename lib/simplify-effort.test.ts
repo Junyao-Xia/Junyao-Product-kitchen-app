@@ -34,6 +34,12 @@ describe("simplify effort", () => {
     ).toBe(true);
   });
 
+  it("allows a longer rewrite when the original already had many steps", () => {
+    const original = Array.from({ length: 5 }, (_, index) => `Prep item ${index}.`);
+    const simplified = Array.from({ length: 6 }, (_, index) => `Step ${index}.`);
+    expect(effortReducedVersusOriginal(original, simplified)).toBe(true);
+  });
+
   it("accepts fewer steps as effort reduction", () => {
     expect(
       effortReducedVersusOriginal(
