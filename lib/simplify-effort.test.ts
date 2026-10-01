@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
+import seedDinners from "@/data/dinners.json";
 import {
   effortReducedVersusOriginal,
   improvementClaimSupported,
   isAlreadySimpleMeal,
+  originalUsesSingleCookingVessel,
 } from "@/lib/simplify-effort";
+import type { Dinner } from "@/lib/types";
+
+const chickenRice = (seedDinners as Dinner[]).find(
+  (d) => d.id === "dinner-chicken-rice",
+)!;
 
 describe("simplify effort", () => {
   it("detects already-simple meals", () => {
@@ -19,12 +26,48 @@ describe("simplify effort", () => {
     ).toBe(false);
   });
 
-  it("requires one-pan claims to match the rewritten steps", () => {
+  it("detects when the original already uses one cooking vessel", () => {
+    expect(originalUsesSingleCookingVessel(chickenRice.steps)).toBe(true);
+  });
+
+  it("rejects fewer-pan claims when the original already uses one skillet", () => {
     expect(
-      improvementClaimSupported("Uses one pan instead of two.", [
-        "Brown chicken in a skillet.",
-        "Add rice and simmer in the same pan.",
-      ]),
+      improvementClaimSupported(
+        "Uses one pan instead of two.",
+        [
+          "Simmer chicken and rice in one skillet.",
+          "Serve.",
+        ],
+        chickenRice.steps,
+      ),
+    ).toBe(false);
+    expect(
+      improvementClaimSupported(
+        "Skips browning the chicken and simmers everything in one skillet.",
+        [
+          "Simmer chicken and rice in one skillet.",
+          "Serve.",
+        ],
+        chickenRice.steps,
+      ),
+    ).toBe(true);
+  });
+
+  it("requires one-pan claims to match the rewritten steps when the original used multiple vessels", () => {
+    const original = [
+      "Simmer rice in a pot.",
+      "Pan-fry chicken in a skillet.",
+      "Combine and serve.",
+    ];
+    expect(
+      improvementClaimSupported(
+        "Uses one pan instead of two.",
+        [
+          "Brown chicken in a skillet.",
+          "Add rice and simmer in the same pan.",
+        ],
+        original,
+      ),
     ).toBe(true);
     expect(
       improvementClaimSupported("Combines the recipe into two short steps.", [
@@ -46,6 +89,25 @@ describe("simplify effort", () => {
         ["Cook rice.", "Cook chicken in a pan.", "Combine and serve."],
         ["Simmer chicken and rice together in one pot.", "Serve."],
       ),
+    ).toBe(true);
+  });
+
+  it("does not treat shorter rewrites as effort reduction for already-simple one-skillet meals", () => {
+    expect(
+      effortReducedVersusOriginal(chickenRice.steps, [
+        "Season chicken and rinse rice.",
+        "Simmer chicken and rice in the same skillet until done.",
+        "Serve.",
+      ]),
+    ).toBe(false);
+  });
+
+  it("allows a recognized shortcut when browning is removed from one-skillet chicken and rice", () => {
+    expect(
+      effortReducedVersusOriginal(chickenRice.steps, [
+        "Add chicken, rice, and water to a skillet and simmer until the chicken reads 165°F (74°C) on a food thermometer.",
+        "Serve.",
+      ]),
     ).toBe(true);
   });
 });
