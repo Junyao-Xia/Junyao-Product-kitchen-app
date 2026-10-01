@@ -200,15 +200,18 @@ export function improvementClaimSupported(
     return false;
   }
 
-  if (
-    originalSteps.length > 0 &&
-    claimsFewerPansThanBefore(trimmed) &&
-    (originalUsesSingleCookingVessel(originalSteps) ||
-      (usesSingleCookingPanWithTransfers(originalSteps) &&
-        effectiveCookwareCount(simplifiedSteps) >=
-          effectiveCookwareCount(originalSteps)))
-  ) {
-    return false;
+  if (originalSteps.length > 0 && claimsFewerPansThanBefore(trimmed)) {
+    if (originalUsesSingleCookingVessel(originalSteps)) {
+      return false;
+    }
+    if (
+      usesSingleCookingPanWithTransfers(originalSteps) &&
+      (effectiveCookwareCount(simplifiedSteps) >=
+        effectiveCookwareCount(originalSteps) ||
+        countCookwareMentions(simplifiedSteps.join(" ")) > 1)
+    ) {
+      return false;
+    }
   }
 
   if (
