@@ -14,6 +14,7 @@ import {
   applyMeatDiversity,
   buildMeatDiversityPartialMessage,
   buildMeatDiversityPlan,
+  buildMeatDiversityRetryHint,
   countMeatsInIngredientNames,
   meatDiversityPromptLines,
   meetsMeatDiversityRules,
@@ -50,9 +51,16 @@ export type SuggestSuccess = {
   message?: string;
 };
 
+export type SuggestFailureReason =
+  | "parse_retry_exhausted"
+  | "validation_empty"
+  | "openai_error"
+  | "missing_api_key";
+
 export type SuggestFailure = {
   ok: false;
   error: string;
+  reason?: SuggestFailureReason;
 };
 
 export type SuggestResult = SuggestSuccess | SuggestFailure;
@@ -275,19 +283,24 @@ export function validateSuggestItem(
   };
 }
 
-export function parseSuggestResponse(
+export type ExtractValidMealsResult =
+  | { kind: "parse_error" }
+  | { kind: "no_valid"; unableReason: string }
+  | { kind: "ok"; suggestions: AiDinnerSuggestion[] };
+
+export function extractValidMealsFromSuggestRaw(
   raw: string,
   cookableNames: string[],
-): SuggestResult {
+): ExtractValidMealsResult {
   let payload: RawSuggestPayload;
   try {
     payload = JSON.parse(extractJsonPayload(raw)) as RawSuggestPayload;
   } catch {
-    return { ok: false, error: SUGGEST_GENERATION_FAILED };
+    return { kind: "parse_error" };
   }
 
   if (!payload || typeof payload !== "object") {
-    return { ok: false, error: SUGGEST_GENERATION_FAILED };
+    return { kind: "parse_error" };
   }
 
   const unableReason =
@@ -297,8 +310,8 @@ export function parseSuggestResponse(
 
   if (!Array.isArray(payload.suggestions)) {
     return {
-      ok: false,
-      error: unableReason || SUGGEST_NONE_FIT_MESSAGE,
+      kind: "no_valid",
+      unableReason: unableReason || SUGGEST_NONE_FIT_MESSAGE,
     };
   }
 
@@ -315,12 +328,29 @@ export function parseSuggestResponse(
 
   if (suggestions.length === 0) {
     return {
-      ok: false,
-      error: unableReason || SUGGEST_GENERATION_FAILED,
+      kind: "no_valid",
+      unableReason: unableReason || SUGGEST_GENERATION_FAILED,
     };
   }
 
-  return { ok: true, suggestions };
+  return { kind: "ok", suggestions };
+}
+
+export function parseSuggestResponse(
+  raw: string,
+  cookableNames: string[],
+): SuggestResult {
+  const extracted = extractValidMealsFromSuggestRaw(raw, cookableNames);
+  if (extracted.kind === "parse_error") {
+    return { ok: false, error: SUGGEST_GENERATION_FAILED };
+  }
+  if (extracted.kind === "no_valid") {
+    return {
+      ok: false,
+      error: extracted.unableReason || SUGGEST_GENERATION_FAILED,
+    };
+  }
+  return { ok: true, suggestions: extracted.suggestions };
 }
 
 export type SuggestRequestBody = {
@@ -385,23 +415,54 @@ export function assignSuggestionIds(
   }));
 }
 
+const SUGGEST_PARSE_RETRY_HINT =
+  "Return JSON only (no markdown). Shape: {\"suggestions\":[...],\"unableReason\":null}. Each suggestion uses at most one quick-select meat, only listed ingredients plus assumed staples, and steps that mention only those ingredients.";
+
+const SUGGEST_VALIDATION_RETRY_HINT =
+  "Each suggestion must pass: integer minutes 1–20, at least two steps, one cookable ingredient from the list, at most one meat per dish, no extra ingredients in steps.";
+
+function buildRetryHintFromExtract(
+  extracted: ExtractValidMealsResult,
+  diversityPlan: ReturnType<typeof buildMeatDiversityPlan>,
+): string {
+  if (extracted.kind === "parse_error") {
+    return SUGGEST_PARSE_RETRY_HINT;
+  }
+  if (extracted.kind === "no_valid" && extracted.unableReason) {
+    return `${extracted.unableReason} ${SUGGEST_VALIDATION_RETRY_HINT}`;
+  }
+  return buildMeatDiversityRetryHint(diversityPlan);
+}
+
 function suggestFromModelRaw(
   raw: string,
   cookableNames: string[],
   diversityPlan: ReturnType<typeof buildMeatDiversityPlan>,
-): SuggestResult | ApplyMeatDiversityResult {
-  const parsed = parseSuggestResponse(raw, cookableNames);
-  if (!parsed.ok) {
-    return parsed;
+): ApplyMeatDiversityResult {
+  const extracted = extractValidMealsFromSuggestRaw(raw, cookableNames);
+  const retryHint = buildRetryHintFromExtract(extracted, diversityPlan);
+
+  if (extracted.kind !== "ok") {
+    return {
+      suggestions: [],
+      needsRetry: true,
+      retryHint,
+    };
   }
-  return applyMeatDiversity(parsed.suggestions, diversityPlan, cookableNames);
+
+  return applyMeatDiversity(extracted.suggestions, diversityPlan, cookableNames);
 }
 
 function diversityToSuggestResult(
   diversity: ApplyMeatDiversityResult,
+  failureReason?: SuggestFailureReason,
 ): SuggestResult {
   if (diversity.suggestions.length === 0) {
-    return { ok: false, error: SUGGEST_GENERATION_FAILED };
+    return {
+      ok: false,
+      error: SUGGEST_GENERATION_FAILED,
+      reason: failureReason ?? "validation_empty",
+    };
   }
   return {
     ok: true,
@@ -439,7 +500,7 @@ export async function suggestDinnersWithOpenAI(
 
   const apiKey = getOpenAIApiKey();
   if (!apiKey) {
-    return { ok: false, error: SUGGEST_USER_ERROR };
+    return { ok: false, error: SUGGEST_USER_ERROR, reason: "missing_api_key" };
   }
 
   const useSoonNames = listUseSoonIngredientNames(ingredients, today);
@@ -450,11 +511,7 @@ export async function suggestDinnersWithOpenAI(
 
   try {
     let raw = await chatCompletion(system, user, apiKey);
-    let outcome = suggestFromModelRaw(raw, cookableNames, diversityPlan);
-    if ("ok" in outcome && outcome.ok === false) {
-      return outcome;
-    }
-    let diversity = outcome as ApplyMeatDiversityResult;
+    let diversity = suggestFromModelRaw(raw, cookableNames, diversityPlan);
 
     const shouldRetryForRepeat =
       diversity.suggestions.length > 0 &&
@@ -465,24 +522,21 @@ export async function suggestDinnersWithOpenAI(
         cookableNames,
       );
 
-    if (diversity.needsRetry || shouldRetryForRepeat) {
+    const shouldRetry =
+      diversity.needsRetry ||
+      diversity.suggestions.length === 0 ||
+      shouldRetryForRepeat;
+
+    if (shouldRetry) {
       const firstPass = diversity.suggestions;
       raw = await chatCompletion(
         system,
         `${user}\n\nCorrection: ${diversity.retryHint}`,
         apiKey,
       );
-      outcome = suggestFromModelRaw(raw, cookableNames, diversityPlan);
-      if ("ok" in outcome && outcome.ok === false) {
-        return diversityToSuggestResult({
-          ...diversity,
-          suggestions: firstPass,
-          needsRetry: false,
-        });
-      }
-      const secondPass = outcome as ApplyMeatDiversityResult;
+      const secondOutcome = suggestFromModelRaw(raw, cookableNames, diversityPlan);
       const merged = mergeSuggestionLists(
-        secondPass.suggestions,
+        secondOutcome.suggestions,
         firstPass,
       );
       diversity = applyMeatDiversity(merged, diversityPlan, cookableNames);
@@ -499,8 +553,11 @@ export async function suggestDinnersWithOpenAI(
       }
     }
 
-    return diversityToSuggestResult(diversity);
+    return diversityToSuggestResult(
+      diversity,
+      diversity.suggestions.length === 0 ? "parse_retry_exhausted" : undefined,
+    );
   } catch {
-    return { ok: false, error: SUGGEST_USER_ERROR };
+    return { ok: false, error: SUGGEST_USER_ERROR, reason: "openai_error" };
   }
 }

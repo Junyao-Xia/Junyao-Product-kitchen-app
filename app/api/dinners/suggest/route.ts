@@ -27,7 +27,11 @@ export async function POST(request: Request) {
       result.error.includes("not in Review") || result.error.includes("Nothing simple")
         ? 422
         : 503;
-    return Response.json(result, { status });
+    console.error("[api/dinners/suggest] failed", {
+      status,
+      reason: result.reason ?? "unknown",
+    });
+    return Response.json({ ok: false, error: result.error }, { status });
   }
 
   return Response.json(result);

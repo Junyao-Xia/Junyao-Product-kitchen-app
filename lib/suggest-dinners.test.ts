@@ -241,7 +241,11 @@ describe("suggest-dinners", () => {
       ],
       "2026-09-29",
     );
-    expect(result).toEqual({ ok: false, error: SUGGEST_USER_ERROR });
+    expect(result).toEqual({
+      ok: false,
+      error: SUGGEST_USER_ERROR,
+      reason: "missing_api_key",
+    });
     vi.unstubAllEnvs();
   });
 
@@ -259,7 +263,11 @@ describe("suggest-dinners", () => {
       "2026-09-29",
       vi.fn().mockRejectedValue(new Error("network")),
     );
-    expect(result).toEqual({ ok: false, error: SUGGEST_USER_ERROR });
+    expect(result).toEqual({
+      ok: false,
+      error: SUGGEST_USER_ERROR,
+      reason: "openai_error",
+    });
     vi.unstubAllEnvs();
   });
 
