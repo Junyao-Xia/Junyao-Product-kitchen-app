@@ -231,7 +231,7 @@ describe("simplify-dinner", () => {
             "Simmer chicken and rice in one pot.",
             "Serve.",
           ],
-          improvement: "Uses one pan instead of two.",
+          improvement: "Bad",
         }),
       )
       .mockResolvedValueOnce(
@@ -242,7 +242,7 @@ describe("simplify-dinner", () => {
       );
 
     const result = await simplifyMealWithOpenAI(
-      seededChickenRice,
+      dinner,
       ["Chicken", "Rice"],
       chatCompletion,
     );
