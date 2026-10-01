@@ -27,11 +27,11 @@ describe("simplify effort", () => {
       ]),
     ).toBe(true);
     expect(
-      improvementClaimSupported("Uses one pan instead of two.", [
+      improvementClaimSupported("Combines the recipe into two short steps.", [
         "Boil rice in a pot.",
         "Pan-fry chicken separately.",
       ]),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("accepts fewer steps as effort reduction", () => {

@@ -33,19 +33,22 @@ describe("simplify-dinner", () => {
       JSON.stringify({
         alreadySimple: false,
         lines: [
-          "Simmer rice in one pot.",
-          "Pan-fry chicken and mix in.",
-          "Serve.",
+          "Simmer rice and pan-fry chicken in one pot.",
+          "Serve together.",
         ],
         improvement: "Uses one pot instead of separate rice and chicken pans.",
       }),
       allowed,
       ["Chicken", "Rice"],
-      dinner.steps,
+      [
+        "Simmer rice in a pot.",
+        "Pan-fry chicken in a skillet.",
+        "Combine and serve.",
+      ],
     );
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.lines).toHaveLength(3);
+      expect(result.lines).toHaveLength(2);
       expect(result.improvement).toContain("one pot");
     }
   });
