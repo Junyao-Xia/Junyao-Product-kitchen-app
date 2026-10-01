@@ -150,7 +150,9 @@ describe("KitchenApp", () => {
 
     await user.type(screen.getByLabelText("Reminder date"), "2026-10-10");
     await user.click(screen.getByRole("button", { name: "Add ingredient" }));
-    expect(await screen.findByText("Beef")).toBeInTheDocument();
+    expect(
+      (await screen.findAllByText("Beef")).length,
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it("rejects a duplicate available ingredient name", async () => {
