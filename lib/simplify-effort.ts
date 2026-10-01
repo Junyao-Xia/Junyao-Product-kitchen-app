@@ -59,7 +59,7 @@ export function isOneSkilletMeal(steps: string[]): boolean {
   );
 }
 
-function effectiveCookwareCount(steps: string[]): number {
+export function effectiveCookwareCount(steps: string[]): number {
   if (isOneSkilletMeal(steps)) {
     return 1;
   }
@@ -111,12 +111,15 @@ export function inferDefaultImprovement(
   originalSteps: string[],
   simplifiedSteps: string[],
 ): string {
-  const originalCookware = countCookwareMentions(originalSteps.join(" "));
-  const simplifiedCookware = countCookwareMentions(simplifiedSteps.join(" "));
+  const originalCookware = effectiveCookwareCount(originalSteps);
+  const simplifiedCookware = effectiveCookwareCount(simplifiedSteps);
   const originalText = originalSteps.join(" ");
   const simplifiedText = simplifiedSteps.join(" ");
 
-  if (simplifiedCookware < originalCookware) {
+  if (
+    simplifiedCookware < originalCookware &&
+    !isOneSkilletMeal(originalSteps)
+  ) {
     return "Uses fewer pans than the original steps.";
   }
 
