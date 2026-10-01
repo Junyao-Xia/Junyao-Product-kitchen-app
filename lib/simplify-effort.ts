@@ -104,9 +104,7 @@ function hasRecognizedCookingShortcut(
   if (!removedBrowning && !removedPushAside) {
     return false;
   }
-  return /\b(same skillet|one skillet|to a skillet|in a skillet|one pan|one pot|together|cover and simmer|simmer)\b/i.test(
-    simplifiedText,
-  );
+  return /\b(skillet|simmer|cover and simmer)\b/i.test(simplifiedText);
 }
 
 export function inferDefaultImprovement(
@@ -160,6 +158,14 @@ export function improvementClaimSupported(
     return false;
   }
 
+  if (
+    /\b(fewer|fewer steps|less prep|combines|clearer|shorter|skips|aside)\b/i.test(
+      trimmed,
+    )
+  ) {
+    return true;
+  }
+
   const combined = [trimmed, ...simplifiedSteps].join(" ");
   if (ONE_PAN_PATTERN.test(trimmed)) {
     if (
@@ -175,13 +181,6 @@ export function improvementClaimSupported(
       countCookwareMentions(simplifiedSteps.join(" ")) <=
         countCookwareMentions(combined)
     );
-  }
-  if (
-    /\b(fewer|fewer steps|less prep|one pan|one pot|same pan|combines|clearer|shorter|skips)\b/i.test(
-      trimmed,
-    )
-  ) {
-    return true;
   }
   return trimmed.length >= 10;
 }
