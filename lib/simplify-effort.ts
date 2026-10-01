@@ -191,6 +191,9 @@ export function effortReducedVersusOriginal(
     return true;
   }
   if (isOneSkilletMeal(originalSteps)) {
+    if (simplifiedSteps.length >= originalSteps.length - 1) {
+      return false;
+    }
     return hasRecognizedCookingShortcut(originalSteps, simplifiedSteps);
   }
   if (simplifiedSteps.length < originalSteps.length) {
