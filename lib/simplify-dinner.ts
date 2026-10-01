@@ -248,7 +248,7 @@ export function parseSimplifyResponse(
         return validated;
       }
       const inferred = inferDefaultImprovement(originalSteps, validated.lines);
-      let summary = improvement || inferred;
+      let summary = improvement || validated.improvement || inferred;
       if (!summary) {
         return {
           ok: false,
@@ -259,9 +259,12 @@ export function parseSimplifyResponse(
       if (
         !improvementClaimSupported(summary, validated.lines, originalSteps)
       ) {
-        if (improvementClaimSupported(inferred, validated.lines, originalSteps)) {
-          summary = inferred;
-        } else if (
+        summary = validated.improvement || inferred;
+      }
+      if (
+        !improvementClaimSupported(summary, validated.lines, originalSteps)
+      ) {
+        if (
           isAlreadySimpleMeal(originalSteps) &&
           !effortReducedVersusOriginal(originalSteps, validated.lines)
         ) {
@@ -271,13 +274,12 @@ export function parseSimplifyResponse(
             improvement: alreadySimpleMessage(),
             alreadySimple: true,
           };
-        } else {
-          return {
-            ok: false,
-            error: SIMPLIFY_USER_ERROR,
-            reason: "unsupported_improvement",
-          };
         }
+        return {
+          ok: false,
+          error: SIMPLIFY_USER_ERROR,
+          reason: "unsupported_improvement",
+        };
       }
       return {
         ok: true,
