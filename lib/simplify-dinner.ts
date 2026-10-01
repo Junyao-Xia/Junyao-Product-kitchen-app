@@ -1,9 +1,12 @@
 import { ASSUMED_PANTRY_STAPLES } from "@/lib/assumed-pantry";
 import {
+  alreadySimpleMessage,
   effortReducedVersusOriginal,
   improvementClaimSupported,
+  inferDefaultImprovement,
   isAlreadySimpleMeal,
 } from "@/lib/simplify-effort";
+import { extractJsonPayload } from "@/lib/model-json";
 import { listCookableIngredientNames } from "@/lib/cookable-ingredients";
 import { fetchChatCompletion, getOpenAIApiKey } from "@/lib/openai";
 import { normalizeIngredientName } from "@/lib/dinners";
@@ -157,6 +160,14 @@ function validateSimplifyLines(
   }
 
   if (!effortReducedVersusOriginal(originalSteps, limitedLines)) {
+    if (isAlreadySimpleMeal(originalSteps)) {
+      return {
+        ok: true,
+        lines: [],
+        improvement: alreadySimpleMessage(),
+        alreadySimple: true,
+      };
+    }
     return {
       ok: false,
       error: SIMPLIFY_USER_ERROR,
@@ -164,7 +175,11 @@ function validateSimplifyLines(
     };
   }
 
-  return { ok: true, lines: limitedLines, improvement: "" };
+  return {
+    ok: true,
+    lines: limitedLines,
+    improvement: inferDefaultImprovement(originalSteps, limitedLines),
+  };
 }
 
 export function parseSimplifyResponse(
@@ -183,7 +198,7 @@ export function parseSimplifyResponse(
 
   let payload: RawSimplifyPayload | null = null;
   try {
-    payload = JSON.parse(trimmed) as RawSimplifyPayload;
+    payload = JSON.parse(extractJsonPayload(trimmed)) as RawSimplifyPayload;
   } catch {
     payload = null;
   }
@@ -191,19 +206,14 @@ export function parseSimplifyResponse(
   if (payload && typeof payload === "object") {
     if (payload.alreadySimple === true) {
       const message =
-        typeof payload.message === "string" ? payload.message.trim() : "";
-      if (!message || SAFETY_PATTERN.test(message)) {
+        typeof payload.message === "string" && payload.message.trim()
+          ? payload.message.trim()
+          : alreadySimpleMessage();
+      if (SAFETY_PATTERN.test(message)) {
         return {
           ok: false,
           error: SIMPLIFY_USER_ERROR,
           reason: "missing_improvement",
-        };
-      }
-      if (!isAlreadySimpleMeal(originalSteps)) {
-        return {
-          ok: false,
-          error: SIMPLIFY_USER_ERROR,
-          reason: "no_effort_reduction",
         };
       }
       return {
@@ -232,14 +242,19 @@ export function parseSimplifyResponse(
       if (!validated.ok) {
         return validated;
       }
-      if (!improvement) {
+      if (validated.alreadySimple) {
+        return validated;
+      }
+      const summary =
+        improvement || inferDefaultImprovement(originalSteps, validated.lines);
+      if (!summary) {
         return {
           ok: false,
           error: SIMPLIFY_USER_ERROR,
           reason: "missing_improvement",
         };
       }
-      if (!improvementClaimSupported(improvement, validated.lines)) {
+      if (!improvementClaimSupported(summary, validated.lines)) {
         return {
           ok: false,
           error: SIMPLIFY_USER_ERROR,
@@ -249,7 +264,7 @@ export function parseSimplifyResponse(
       return {
         ok: true,
         lines: validated.lines,
-        improvement,
+        improvement: summary,
         alreadySimple: false,
       };
     }
@@ -262,14 +277,26 @@ export function parseSimplifyResponse(
     cookableIngredientNames,
     originalSteps,
   );
-  if (!validated.ok) {
-    return validated;
+  if (validated.ok) {
+    return {
+      ok: true,
+      lines: validated.lines,
+      improvement: validated.improvement,
+      alreadySimple: validated.alreadySimple,
+    };
   }
-  return {
-    ok: false,
-    error: SIMPLIFY_USER_ERROR,
-    reason: "missing_improvement",
-  };
+  if (
+    validated.reason === "no_effort_reduction" &&
+    isAlreadySimpleMeal(originalSteps)
+  ) {
+    return {
+      ok: true,
+      lines: [],
+      improvement: alreadySimpleMessage(),
+      alreadySimple: true,
+    };
+  }
+  return validated;
 }
 
 export type ValidatedSeededSimplifyRequest = {

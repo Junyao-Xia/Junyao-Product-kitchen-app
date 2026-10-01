@@ -8,8 +8,10 @@ import { listCookableIngredientNames } from "@/lib/cookable-ingredients";
 import { isUseSoon } from "@/lib/ingredient-groups";
 import { fetchChatCompletion, getOpenAIApiKey } from "@/lib/openai";
 import { normalizeIngredientName } from "@/lib/dinners";
+import { extractJsonPayload } from "@/lib/model-json";
 import {
   applyMeatDiversity,
+  buildMeatDiversityPartialMessage,
   buildMeatDiversityPlan,
   countMeatsInIngredientNames,
   meatDiversityPromptLines,
@@ -34,6 +36,9 @@ export const SUGGEST_NO_COOKABLE_MESSAGE =
 
 export const SUGGEST_NONE_FIT_MESSAGE =
   "Nothing simple fits what you listed. Try adding more ingredients or use the dinners above.";
+
+/** Parse/validation failed — not the same as an empty pantry. */
+export const SUGGEST_GENERATION_FAILED = SUGGEST_USER_ERROR;
 
 const SAFETY_PATTERN =
   /\b(safe to eat|unsafe|spoiled|expired|food poisoning|gone bad|still good to eat|not safe)\b/i;
@@ -274,13 +279,13 @@ export function parseSuggestResponse(
 ): SuggestResult {
   let payload: RawSuggestPayload;
   try {
-    payload = JSON.parse(raw) as RawSuggestPayload;
+    payload = JSON.parse(extractJsonPayload(raw)) as RawSuggestPayload;
   } catch {
-    return { ok: false, error: SUGGEST_NONE_FIT_MESSAGE };
+    return { ok: false, error: SUGGEST_GENERATION_FAILED };
   }
 
   if (!payload || typeof payload !== "object") {
-    return { ok: false, error: SUGGEST_NONE_FIT_MESSAGE };
+    return { ok: false, error: SUGGEST_GENERATION_FAILED };
   }
 
   const unableReason =
@@ -309,7 +314,7 @@ export function parseSuggestResponse(
   if (suggestions.length === 0) {
     return {
       ok: false,
-      error: unableReason || SUGGEST_NONE_FIT_MESSAGE,
+      error: unableReason || SUGGEST_GENERATION_FAILED,
     };
   }
 
@@ -394,13 +399,30 @@ function diversityToSuggestResult(
   diversity: ApplyMeatDiversityResult,
 ): SuggestResult {
   if (diversity.suggestions.length === 0) {
-    return { ok: false, error: SUGGEST_NONE_FIT_MESSAGE };
+    return { ok: false, error: SUGGEST_GENERATION_FAILED };
   }
   return {
     ok: true,
     suggestions: assignSuggestionIds(diversity.suggestions),
     message: diversity.message,
   };
+}
+
+function mergeSuggestionLists(
+  primary: AiDinnerSuggestion[],
+  secondary: AiDinnerSuggestion[],
+): AiDinnerSuggestion[] {
+  const seen = new Set<string>();
+  const merged: AiDinnerSuggestion[] = [];
+  for (const item of [...primary, ...secondary]) {
+    const key = normalizeIngredientName(item.name);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    merged.push(item);
+  }
+  return merged.slice(0, MAX_SUGGESTIONS);
 }
 
 export async function suggestDinnersWithOpenAI(
@@ -442,6 +464,7 @@ export async function suggestDinnersWithOpenAI(
       );
 
     if (diversity.needsRetry || shouldRetryForRepeat) {
+      const firstPass = diversity.suggestions;
       raw = await chatCompletion(
         system,
         `${user}\n\nCorrection: ${diversity.retryHint}`,
@@ -449,9 +472,29 @@ export async function suggestDinnersWithOpenAI(
       );
       outcome = suggestFromModelRaw(raw, cookableNames, diversityPlan);
       if ("ok" in outcome && outcome.ok === false) {
-        return outcome;
+        return diversityToSuggestResult({
+          ...diversity,
+          suggestions: firstPass,
+          needsRetry: false,
+        });
       }
-      diversity = outcome as ApplyMeatDiversityResult;
+      const secondPass = outcome as ApplyMeatDiversityResult;
+      const merged = mergeSuggestionLists(
+        secondPass.suggestions,
+        firstPass,
+      );
+      diversity = applyMeatDiversity(merged, diversityPlan, cookableNames);
+      if (diversity.suggestions.length === 0 && merged.length > 0) {
+        diversity = {
+          suggestions: merged.slice(0, MAX_SUGGESTIONS),
+          needsRetry: false,
+          retryHint: diversity.retryHint,
+          message: buildMeatDiversityPartialMessage(
+            Math.min(merged.length, MAX_SUGGESTIONS),
+            diversityPlan,
+          ),
+        };
+      }
     }
 
     return diversityToSuggestResult(diversity);

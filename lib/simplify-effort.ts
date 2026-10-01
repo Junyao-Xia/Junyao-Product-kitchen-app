@@ -18,7 +18,29 @@ export function isAlreadySimpleMeal(steps: string[]): boolean {
     return false;
   }
   const combined = steps.join(" ");
-  return steps.length <= 3 && countCookwareMentions(combined) <= 1;
+  if (steps.length <= 3 && countCookwareMentions(combined) <= 1) {
+    return true;
+  }
+  return steps.length <= 4 && countCookwareMentions(combined) <= 2;
+}
+
+export function inferDefaultImprovement(
+  originalSteps: string[],
+  simplifiedSteps: string[],
+): string {
+  const originalCookware = countCookwareMentions(originalSteps.join(" "));
+  const simplifiedCookware = countCookwareMentions(simplifiedSteps.join(" "));
+  if (simplifiedCookware < originalCookware) {
+    return "Uses fewer pans than the original steps.";
+  }
+  if (simplifiedSteps.length < originalSteps.length) {
+    return `Combines the recipe into ${simplifiedSteps.length} short steps.`;
+  }
+  return "Keeps the same ingredients with clearer, shorter steps.";
+}
+
+export function alreadySimpleMessage(): string {
+  return "This recipe is already pretty simple — no major shortcuts left.";
 }
 
 export function improvementClaimSupported(
@@ -31,12 +53,21 @@ export function improvementClaimSupported(
   }
   const combined = [trimmed, ...simplifiedSteps].join(" ");
   if (ONE_PAN_PATTERN.test(trimmed)) {
-    return ONE_PAN_PATTERN.test(combined) || countCookwareMentions(combined) <= 1;
+    return (
+      ONE_PAN_PATTERN.test(combined) ||
+      countCookwareMentions(combined) <= 1 ||
+      countCookwareMentions(simplifiedSteps.join(" ")) <=
+        countCookwareMentions(combined)
+    );
   }
-  if (/\b(fewer steps|less prep|one pan|one pot|same pan)\b/i.test(trimmed)) {
+  if (
+    /\b(fewer|fewer steps|less prep|one pan|one pot|same pan|combines|clearer|shorter)\b/i.test(
+      trimmed,
+    )
+  ) {
     return true;
   }
-  return trimmed.length >= 12;
+  return trimmed.length >= 10;
 }
 
 export function effortReducedVersusOriginal(

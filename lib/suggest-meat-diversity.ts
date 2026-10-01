@@ -132,10 +132,13 @@ export function meetsMeatDiversityRules(
 
   if (cookableMeatCount >= 3) {
     const needed = Math.min(
-      MAX_SUGGESTIONS,
       suggestions.length,
       focusMeats.length,
+      MAX_SUGGESTIONS,
     );
+    if (needed <= 1) {
+      return true;
+    }
     if (primaries.length < needed) {
       return false;
     }
@@ -148,6 +151,9 @@ export function meetsMeatDiversityRules(
   }
 
   if (cookableMeatCount === 2) {
+    if (suggestions.length < 2) {
+      return true;
+    }
     const required = new Set(
       listCookableQuickSelectMeats(cookableNames).map((meat) =>
         normalizeIngredientName(meat),
@@ -285,50 +291,55 @@ export function applyMeatDiversity(
   cookableNames: string[],
 ): ApplyMeatDiversityResult {
   const retryHint = buildMeatDiversityRetryHint(plan);
-  if (plan.cookableMeatCount === 0) {
-    return { suggestions, needsRetry: false, retryHint };
-  }
-
   const singleMeatOnly = suggestions.filter(suggestionPassesSingleMeatRule);
-  if (meetsMeatDiversityRules(singleMeatOnly, plan, cookableNames)) {
-    return { suggestions: singleMeatOnly, needsRetry: false, retryHint };
+  const validPool =
+    singleMeatOnly.length > 0
+      ? singleMeatOnly
+      : suggestions.slice(0, MAX_SUGGESTIONS);
+
+  if (validPool.length === 0) {
+    return { suggestions: [], needsRetry: false, retryHint };
   }
 
-  const repeatedPrimary =
-    singleMeatOnly.length >= 2 &&
-    plan.cookableMeatCount >= 2 &&
-    uniquePrimaryMeats(singleMeatOnly, cookableNames).length === 1;
-  if (repeatedPrimary) {
-    return { suggestions: [], needsRetry: true, retryHint };
-  }
-
-  const subset = selectDiverseSuggestSubset(
-    singleMeatOnly,
-    plan,
-    cookableNames,
-  );
-  if (
-    subset.length > 0 &&
-    meetsMeatDiversityRules(subset, plan, cookableNames)
-  ) {
-    const message =
-      subset.length < singleMeatOnly.length ||
-      subset.length < Math.min(MAX_SUGGESTIONS, plan.focusMeats.length || MAX_SUGGESTIONS)
-        ? buildMeatDiversityPartialMessage(subset.length, plan)
-        : undefined;
-    return { suggestions: subset, message, needsRetry: false, retryHint };
-  }
-
-  if (subset.length > 0) {
+  if (plan.cookableMeatCount === 0) {
     return {
-      suggestions: subset,
-      message: buildMeatDiversityPartialMessage(subset.length, plan),
+      suggestions: validPool.slice(0, MAX_SUGGESTIONS),
       needsRetry: false,
       retryHint,
     };
   }
 
-  return { suggestions: [], needsRetry: true, retryHint };
+  if (meetsMeatDiversityRules(validPool, plan, cookableNames)) {
+    return {
+      suggestions: validPool.slice(0, MAX_SUGGESTIONS),
+      needsRetry: false,
+      retryHint,
+    };
+  }
+
+  const subset = selectDiverseSuggestSubset(validPool, plan, cookableNames);
+  const toReturn =
+    subset.length > 0
+      ? subset
+      : validPool.slice(0, MAX_SUGGESTIONS);
+
+  const repeatedPrimary =
+    validPool.length >= 2 &&
+    plan.cookableMeatCount >= 2 &&
+    uniquePrimaryMeats(validPool, cookableNames).length === 1;
+
+  const diversityMet = meetsMeatDiversityRules(toReturn, plan, cookableNames);
+  const message =
+    !diversityMet || toReturn.length < validPool.length
+      ? buildMeatDiversityPartialMessage(toReturn.length, plan)
+      : undefined;
+
+  return {
+    suggestions: toReturn,
+    message,
+    needsRetry: repeatedPrimary && !diversityMet,
+    retryHint,
+  };
 }
 
 export function meatDiversityPromptLines(plan: MeatDiversityPlan): string[] {
